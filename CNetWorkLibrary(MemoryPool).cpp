@@ -344,7 +344,6 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* session)
 	if (InterlockedExchange(&(session->bIsSend), TRUE) == FALSE)
 	{
 		int size = session->SendBuffer->GetUseSize();
-
 		if (size == 0 || session->SessionID == -1)
 		{
 			InterlockedExchange(&session->bIsSend, FALSE);
@@ -369,7 +368,6 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* session)
 				i++;
 				size -= 8;
 			}
-			packetCount += session->dwPacketCount;
 			InterlockedIncrement(&session->dwIOCount);
 			ZeroMemory(&session->SendOverlapped->Overlapped, sizeof(WSAOVERLAPPED));
 			retval = WSASend(session->socket, wsaBuf, session->dwPacketCount, &sendbytes, flags, &session->SendOverlapped->Overlapped, NULL);
@@ -380,12 +378,19 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* session)
 		{
 			if (WSAGetLastError() != ERROR_IO_PENDING)
 			{
-				InterlockedExchange(&(session->bIsSend), FALSE);
-				if (InterlockedDecrement(&session->dwIOCount) <= 0)
+				if (WSAGetLastError() != WSAENOTSOCK && WSAGetLastError() != WSAECONNRESET)
 				{
-					DisconnectSession(session->SessionID);
-					SessionRelease(session->SessionID);
+					wprintf(L"sessionID : %d, error : %d\n", session->SessionID, WSAGetLastError());
 				}
+				if (InterlockedExchange(&(session->bIsSend), FALSE) == TRUE)
+				{
+					if (InterlockedDecrement(&session->dwIOCount) <= 0)
+					{
+						DisconnectSession(session->SessionID);
+						SessionRelease(session->SessionID);
+					}
+				}
+
 				return false;
 			}
 		}
@@ -408,14 +413,18 @@ bool joshua::NetworkLibrary::PostRecv(st_SESSION* session)
 		return true;
 	}
 
+	char* writebufptr = session->RecvBuffer->GetWriteBufferPtr();
+	int dirputsize = session->RecvBuffer->GetNotBrokenPutSize();
+	char* bufptr = session->RecvBuffer->GetBufferPtr();
+	int freesize = session->RecvBuffer->GetFreeSize();
 	// 같은데 쪼개서 보내야 할 경우
 	if ((session->RecvBuffer->GetFreeSize() - session->RecvBuffer->GetNotBrokenPutSize()) > 0)
 	{
 		WSABUF wsaBuf[2];
-		wsaBuf[0].buf = (char*)session->RecvBuffer->GetWriteBufferPtr();
-		wsaBuf[0].len = session->RecvBuffer->GetNotBrokenPutSize();
-		wsaBuf[1].buf = (char*)session->RecvBuffer->GetBufferPtr();
-		wsaBuf[1].len = session->RecvBuffer->GetFreeSize() - session->RecvBuffer->GetNotBrokenPutSize();
+		wsaBuf[0].buf = writebufptr;
+		wsaBuf[0].len = dirputsize;
+		wsaBuf[1].buf = bufptr;
+		wsaBuf[1].len = freesize - dirputsize;
 		//비동기 입출력 시작
 		InterlockedIncrement(&session->dwIOCount);
 		retval = WSARecv(session->socket, wsaBuf, 2, &recvbytes, &flags, &session->RecvOverlapped->Overlapped, NULL);
@@ -424,8 +433,8 @@ bool joshua::NetworkLibrary::PostRecv(st_SESSION* session)
 	else if ((session->RecvBuffer->GetFreeSize() - session->RecvBuffer->GetNotBrokenPutSize()) == 0)
 	{
 		WSABUF wsaBuf;
-		wsaBuf.buf = session->RecvBuffer->GetWriteBufferPtr();
-		wsaBuf.len = session->RecvBuffer->GetNotBrokenPutSize();
+		wsaBuf.buf = writebufptr;
+		wsaBuf.len = dirputsize;
 		InterlockedIncrement(&session->dwIOCount);
 		retval = WSARecv(session->socket, &wsaBuf, 1, &recvbytes, &flags, &session->RecvOverlapped->Overlapped, NULL);
 	}
@@ -451,6 +460,8 @@ BOOL joshua::NetworkLibrary::Start(DWORD port, BOOL nagle, const WCHAR* ip, DWOR
 	_pLog->SYSLOG_DIRECTORY(L"LogFile");
 	_pLog->SYSLOG_LEVEL(LOG_LEVEL::e_DEBUG);
 	// 소켓 초기화
+	_dwSessionMax = MaxClient;
+
 	if (InitialNetwork(ip, port, nagle) == false)
 	{
 		_pLog->LOG(L"SERVER", LOG_LEVEL::e_ERROR, L"%s\n", L"Initialize failed!");
@@ -478,7 +489,6 @@ BOOL joshua::NetworkLibrary::Start(DWORD port, BOOL nagle, const WCHAR* ip, DWOR
 		_pLog->LOG(L"SERVER", LOG_LEVEL::e_ERROR, L"%s\n", L"CreateSession() ERROR");
 		return FALSE;
 	}
-	_dwSessionMax = MaxClient;
 	return TRUE;
 }
 
@@ -512,8 +522,10 @@ void joshua::NetworkLibrary::SessionRelease(DWORD id)
 	_SessionArray[index].RecvBuffer->ClearBuffer();
 	_SessionArray[index].SendBuffer->ClearBuffer();
 	_SessionArray[index].lMessageList.clear();
+	_SessionArray[index].dwPacketCount = 0;
 	_SessionArray[index].SessionID = -1;
 	_SessionArray[index].dwIOCount = 0;
+	_SessionArray[index].bIsSend = FALSE;
 	InterlockedDecrement64(&_dwSessionCount);
 	PushIndex(index);
 }

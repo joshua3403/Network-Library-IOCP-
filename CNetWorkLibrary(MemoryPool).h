@@ -6,7 +6,7 @@
 
 #define READ 3
 #define WRITE 5
-#define MAX_CLIENT_COUNT 500
+#define MAX_CLIENT_COUNT 1000
 #define MAX_PACKET_COUNT 2000
 
 namespace joshua
@@ -28,7 +28,7 @@ namespace joshua
 		RingBuffer* RecvBuffer;
 		DWORD dwIOCount;
 		DWORD dwPacketCount;
-		volatile LONG bIsSend;
+		LONG bIsSend;
 		std::list<CMessage*> lMessageList;
 
 		// SessionID가 0이면 사용하지 않는 세션
@@ -83,8 +83,6 @@ namespace joshua
 
 		CRITICAL_SECTION _IndexStackCS;
 
-		LONG64 sendtest;
-		LONG64 recvtest;
 
 	private:
 		// 소켓 초기화

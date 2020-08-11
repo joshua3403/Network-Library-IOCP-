@@ -3,10 +3,10 @@
 
 int main()
 {
-	CMessage::SetMemoryPool(6000, FALSE);
+	CMessage::SetMemoryPool(0, FALSE);
 	Network* test = new Network();
 
-	test->Start(6000,1,NULL,NULL,200);
+	test->Start(6000,1,NULL,NULL,500);
 
 	while (true)
 	{

@@ -87,10 +87,6 @@ public:
 		}
 	}
 
-	void SetRef()
-	{
-		m_lRefCount = 0;
-	}
 
 	static void SetMemoryPool(DWORD count, BOOL bPlacementNew)
 	{
@@ -110,7 +106,6 @@ public:
 	{
 		CMessage* newMessage = g_PacketPool->Alloc();
 		newMessage->Clear();
-		newMessage->SetRef();
 		if (newMessage->GetFront() != 0)
 			wprintf(L"Wrong\n");
 		return newMessage;
@@ -123,7 +118,7 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	void	Clear(void)
 	{
-		m_iFront = m_iRear = m_iUsingSize = 0;
+		m_iFront = m_iRear = m_iUsingSize = m_lRefCount = 0;
 	}
 
 	//////////////////////////////////////////////////////////////////////////
