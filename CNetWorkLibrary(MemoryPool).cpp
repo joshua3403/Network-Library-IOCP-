@@ -39,19 +39,19 @@ BOOL joshua::NetworkLibrary::InitialNetwork(const WCHAR* ip, DWORD port, BOOL Na
 		return fail;
 	}
 
-	// 소켓 Send버퍼의 크기를 0으로 만들자
-	int optval;
+	//// 소켓 Send버퍼의 크기를 0으로 만들자
+	//int optval;
 
-	int optlen = sizeof(optval);
+	//int optlen = sizeof(optval);
 
-	getsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
+	//getsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
 
-	optval = 0;
+	//optval = 0;
 
-	setsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
+	//setsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
 
-	getsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
-	wprintf(L"sendbuf size : %d\n", optval);
+	//getsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
+	//wprintf(L"sendbuf size : %d\n", optval);
 
 	setsockopt(_listen_socket, IPPROTO_TCP, TCP_NODELAY, (char*)&Nagle, sizeof(Nagle));
 
@@ -261,12 +261,14 @@ void joshua::NetworkLibrary::WorkerThread(void)
 		if (retval == FALSE)
 		{
 			DisconnectSession(ptr->SessionID);
+			goto HERE;
 		}
 		else
 		{
 			if (cbTransferred == 0)
 			{
 				DisconnectSession(ptr->SessionID);
+				goto HERE;
 			}
 
 			if (overlapped->ID == READ)
@@ -315,8 +317,9 @@ void joshua::NetworkLibrary::WorkerThread(void)
 				{
 					(*itor)->SubRef();
 					itor = ptr->lMessageList.erase(itor);
-					ptr->dwPacketCount--;
 				}
+				ptr->dwPacketCount = 0;
+
 				if (InterlockedExchange(&ptr->bIsSend, FALSE) == TRUE)
 				{
 					if (ptr->SendBuffer->GetUseSize() > 0)
@@ -325,7 +328,7 @@ void joshua::NetworkLibrary::WorkerThread(void)
 
 			}
 		}
-
+HERE:
 		if(InterlockedDecrement(&ptr->dwIOCount) <= 0)
 		{
 			SessionRelease(ptr->SessionID);
@@ -355,7 +358,7 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* session)
 			int i = 0;
 			while (size > 0)
 			{
-				if (size < 8 || i > MAX_PACKET_COUNT)
+				if ( i >= MAX_PACKET_COUNT)
 					break;
 				CMessage* packet = nullptr;
 				session->SendBuffer->Get((char*)&packet, 8);
@@ -363,7 +366,7 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* session)
 					break;
 				wsaBuf[i].buf = packet->GetBufferPtr();
 				wsaBuf[i].len = packet->GetDataSize();
-				session->dwPacketCount++;
+				InterlockedIncrement(&session->dwPacketCount);
 				session->lMessageList.push_back(packet);
 				i++;
 				size -= 8;
@@ -382,15 +385,12 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* session)
 				{
 					wprintf(L"sessionID : %d, error : %d\n", session->SessionID, WSAGetLastError());
 				}
-				if (InterlockedExchange(&(session->bIsSend), FALSE) == TRUE)
+				InterlockedExchange(&(session->bIsSend), FALSE);				
+				if (InterlockedDecrement(&session->dwIOCount) <= 0)
 				{
-					if (InterlockedDecrement(&session->dwIOCount) <= 0)
-					{
-						DisconnectSession(session->SessionID);
-						SessionRelease(session->SessionID);
-					}
+					DisconnectSession(session->SessionID);
+					SessionRelease(session->SessionID);
 				}
-
 				return false;
 			}
 		}
