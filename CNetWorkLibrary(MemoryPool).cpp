@@ -258,10 +258,24 @@ void joshua::NetworkLibrary::WorkerThread(void)
 		else if (ptr == nullptr && overlapped == NULL && cbTransferred == NULL)
 			break;
 
+		else if (retval == FALSE)
+		{
+			DisconnectSession(ptr->SessionID);
+			if (InterlockedDecrement(&ptr->dwIOCount) == 0)
+			{
+				SessionRelease(ptr->SessionID);
+			}
+			continue;
+		}
+
 		
 		else if (cbTransferred == 0)
 		{
 			DisconnectSession(ptr->SessionID);
+			if (InterlockedDecrement(&ptr->dwIOCount) == 0)
+			{
+				SessionRelease(ptr->SessionID);
+			}
 			continue;
 		}
 

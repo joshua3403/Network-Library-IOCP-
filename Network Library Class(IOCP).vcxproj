@@ -158,6 +158,7 @@
     <ClInclude Include="CNetWorkLibrary(MemoryPool).h" />
     <ClInclude Include="CNetworkTest.h" />
     <ClInclude Include="CNewRingBuffer.h" />
+    <ClInclude Include="MemoryPool(LockFree).h" />
     <ClInclude Include="MemoryPool_mail.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>

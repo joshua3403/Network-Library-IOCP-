@@ -3,7 +3,7 @@
 
 int main()
 {
-	CMessage::SetMemoryPool(0, FALSE);
+	CMessage::SetMemoryPool(1000, FALSE);
 	Network* test = new Network();
 
 	test->Start(6000,TRUE,NULL,NULL,500);

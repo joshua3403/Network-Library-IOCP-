@@ -2,7 +2,6 @@
 #include "stdafx.h"
 #include "CExceptClass.h"
 #include "MemoryPool_mail.h"
-
 class CMessage
 {
 	/*---------------------------------------------------------------
@@ -81,7 +80,7 @@ public:
 
 	void SubRef()
 	{
-		if (InterlockedDecrement(&m_lRefCount) <= 0)
+		if (InterlockedDecrement(&m_lRefCount) == 0)
 		{
 			g_PacketPool->Free(this);
 		}
@@ -106,8 +105,6 @@ public:
 	{
 		CMessage* newMessage = g_PacketPool->Alloc();
 		newMessage->Clear();
-		if (newMessage->GetFront() != 0)
-			wprintf(L"Wrong\n");
 		return newMessage;
 	}
 	//////////////////////////////////////////////////////////////////////////
