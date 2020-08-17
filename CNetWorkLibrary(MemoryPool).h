@@ -32,7 +32,7 @@ namespace joshua
 		std::list<CMessage*> lMessageList;
 
 		// SessionID가 0이면 사용하지 않는 세션
-		DWORD SessionID;
+		LONG64 SessionID;
 		SOCKET socket;
 		SOCKADDR_IN clientaddr;
 		st_SESSION()
@@ -75,7 +75,7 @@ namespace joshua
 
 		// 입출력 완료 포트 생성// IOCP 변수
 		HANDLE _hCP;
-		DWORD _dwSessionID;
+		LONG64 _dwSessionID;
 		std::vector<HANDLE> _ThreadVector;
 
 		st_SESSION* _SessionArray;

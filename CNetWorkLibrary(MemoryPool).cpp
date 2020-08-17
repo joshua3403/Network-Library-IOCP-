@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "CNetWorkLibrary.h"
+#include "CNetWorkLibrary(MemoryPool).h"
 #include "CLog.h"
 
 BOOL joshua::NetworkLibrary::InitialNetwork(const WCHAR* ip, DWORD port, BOOL Nagle)
@@ -157,8 +157,8 @@ DWORD joshua::NetworkLibrary::InsertSession(SOCKET sock, SOCKADDR_IN* sockaddr)
 	else
 	{
 		InterlockedIncrement64(&_dwSessionCount);
-		InterlockedIncrement64(&_dwCount);
-		_SessionArray[temp].SessionID = _dwSessionID++;
+		InterlockedIncrement64(&_dwCount);		
+		_SessionArray[temp].SessionID = InterlockedIncrement64(&_dwSessionID);
 		_SessionArray[temp].socket = sock;
 		memcpy(&_SessionArray[temp].clientaddr, sockaddr, sizeof(SOCKADDR_IN));
 		return temp;
@@ -181,7 +181,7 @@ unsigned int __stdcall joshua::NetworkLibrary::WorkerThread(LPVOID lpParam)
 void joshua::NetworkLibrary::AcceptThread(void)
 {
 	BOOL bFlag = false;
-	srand(GetTickCount() + 1);
+	srand(GetTickCount64() + 1);
 	SYSLOGCLASS* _pLog = SYSLOGCLASS::GetInstance();
 	while (!bFlag)
 	{
@@ -271,14 +271,13 @@ void joshua::NetworkLibrary::WorkerThread(void)
 		
 		else if (cbTransferred == 0)
 		{
-			DisconnectSession(ptr->SessionID);
 			if (InterlockedDecrement(&ptr->dwIOCount) == 0)
 			{
+				DisconnectSession(ptr->SessionID);
 				SessionRelease(ptr->SessionID);
 			}
 			continue;
 		}
-
 
 		if (overlapped->ID == READ)
 		{
@@ -541,17 +540,19 @@ void joshua::NetworkLibrary::SessionRelease(DWORD id)
 void joshua::NetworkLibrary::SendPacket(DWORD id, CMessage* message)
 {
 	int index = 0;
-	for (int i = 0; i < MAX_CLIENT_COUNT; i++)
+	for (int index = 0; index < MAX_CLIENT_COUNT; index++)
 	{
-		if (id == _SessionArray[i].SessionID)
+		if (id == _SessionArray[index].SessionID)
 		{
-			index = i;
+			message->AddRef();
+			_SessionArray[index].SendBuffer->Put((char*)&message, 8);
+			PostSend(&_SessionArray[index]);
 			break;
 		}
 	}
-	message->AddRef();
-	_SessionArray[index].SendBuffer->Put((char*)&message, 8);
-	PostSend(&_SessionArray[index]);
+
+
+
 }
 
 void joshua::NetworkLibrary::PrintPacketCount()
