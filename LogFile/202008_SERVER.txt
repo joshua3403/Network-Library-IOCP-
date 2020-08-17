@@ -1,0 +1,8 @@
+[SERVER] [2020-08-16 22-11-12 / ERROR / 00000001] bind() Error!
+
+[SERVER] [2020-08-16 22-11-12 / ERROR / 00000002] Initialize failed!
+
+[SERVER] [2020-08-16 22-12-59 / ERROR / 00000001] bind() Error!
+
+[SERVER] [2020-08-16 22-12-59 / ERROR / 00000002] Initialize failed!
+

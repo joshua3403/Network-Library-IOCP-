@@ -252,84 +252,78 @@ void joshua::NetworkLibrary::WorkerThread(void)
 
 		retval = GetQueuedCompletionStatus(_hCP, &cbTransferred, (PULONG_PTR)&ptr, (LPOVERLAPPED*)&overlapped, INFINITE);
 
-		if (ptr == nullptr && overlapped == NULL)
+		if (retval == FALSE &&(ptr == nullptr && overlapped == NULL))
 			break;
 
-		if (ptr == nullptr && !overlapped && cbTransferred == NULL)
+		else if (ptr == nullptr && overlapped == NULL && cbTransferred == NULL)
 			break;
 
-		if (retval == FALSE)
+		
+		else if (cbTransferred == 0)
 		{
 			DisconnectSession(ptr->SessionID);
-			goto HERE;
+			continue;
 		}
-		else
+
+
+		if (overlapped->ID == READ)
 		{
-			if (cbTransferred == 0)
+			ptr->RecvBuffer->MoveWritePos(cbTransferred);
+			while (true)
 			{
-				DisconnectSession(ptr->SessionID);
-				goto HERE;
+				int iRecvQSize = ptr->RecvBuffer->GetUseSize();
+				WORD wHeaderLength;
+				if (iRecvQSize < 10)
+					break;
+
+				// 패킷 검사
+				ptr->RecvBuffer->Peek((char*)&wHeaderLength, sizeof(wHeaderLength));
+
+				if (wHeaderLength != 8)
+					break;
+
+				if (wHeaderLength + sizeof(wHeaderLength) > ptr->RecvBuffer->GetUseSize())
+					break;
+
+				ptr->RecvBuffer->RemoveData(2);
+
+				CMessage* newMessage = CMessage::Alloc();
+
+				newMessage->AddRef();
+
+				newMessage->PutData((char*)&wHeaderLength, sizeof(wHeaderLength));
+
+				if (wHeaderLength != ptr->RecvBuffer->Peek(newMessage->GetBufferPtr() + 2, wHeaderLength))
+					break;
+
+				newMessage->MoveWritePos(wHeaderLength);
+
+				ptr->RecvBuffer->RemoveData(wHeaderLength);
+
+				OnRecv(ptr->SessionID, newMessage);
+				newMessage->SubRef();
 			}
-
-			if (overlapped->ID == READ)
-			{
-				ptr->RecvBuffer->MoveWritePos(cbTransferred);
-				while (true)
-				{
-					int iRecvQSize = ptr->RecvBuffer->GetUseSize();
-					WORD wHeaderLength;
-					if (iRecvQSize < 10)
-						break;
-
-					// 패킷 검사
-					ptr->RecvBuffer->Peek((char*)&wHeaderLength, sizeof(wHeaderLength));
-
-					if (wHeaderLength != 8)
-						break;
-
-					if (wHeaderLength + sizeof(wHeaderLength) > ptr->RecvBuffer->GetUseSize())
-						break;
-
-					ptr->RecvBuffer->RemoveData(2);
-
-					CMessage* newMessage = CMessage::Alloc();
-
-					newMessage->AddRef();
-
-					newMessage->PutData((char*)&wHeaderLength, sizeof(wHeaderLength));
-
-					if (wHeaderLength != ptr->RecvBuffer->Peek(newMessage->GetBufferPtr() + 2, wHeaderLength))
-						break;
-
-					newMessage->MoveWritePos(wHeaderLength);
-
-					ptr->RecvBuffer->RemoveData(wHeaderLength);
-
-					OnRecv(ptr->SessionID, newMessage);
-					newMessage->SubRef();
-				}
-				PostRecv(ptr);
-			}
-			else if (overlapped->ID == WRITE)
-			{
-				ZeroMemory(&ptr->SendOverlapped->Overlapped, sizeof(WSAOVERLAPPED));
-				for (std::list<CMessage*>::iterator itor = ptr->lMessageList.begin(); itor != ptr->lMessageList.end();)
-				{
-					(*itor)->SubRef();
-					itor = ptr->lMessageList.erase(itor);
-				}
-				ptr->dwPacketCount = 0;
-
-				if (InterlockedExchange(&ptr->bIsSend, FALSE) == TRUE)
-				{
-					if (ptr->SendBuffer->GetUseSize() > 0)
-						PostSend(ptr);
-				}
-
-			}
+			PostRecv(ptr);
 		}
-HERE:
-		if(InterlockedDecrement(&ptr->dwIOCount) <= 0)
+		else if (overlapped->ID == WRITE)
+		{
+			ZeroMemory(&ptr->SendOverlapped->Overlapped, sizeof(WSAOVERLAPPED));
+			for (std::list<CMessage*>::iterator itor = ptr->lMessageList.begin(); itor != ptr->lMessageList.end();)
+			{
+				(*itor)->SubRef();
+				itor = ptr->lMessageList.erase(itor);
+			}
+			ptr->dwPacketCount = 0;
+
+			if (InterlockedExchange(&ptr->bIsSend, FALSE) == TRUE)
+			{
+				if (ptr->SendBuffer->GetUseSize() > 0)
+					PostSend(ptr);
+			}
+
+		}
+
+		if(InterlockedDecrement(&ptr->dwIOCount) == 0)
 		{
 			SessionRelease(ptr->SessionID);
 		}
@@ -386,7 +380,7 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* session)
 					wprintf(L"sessionID : %d, error : %d\n", session->SessionID, WSAGetLastError());
 				}
 				InterlockedExchange(&(session->bIsSend), FALSE);				
-				if (InterlockedDecrement(&session->dwIOCount) <= 0)
+				if (InterlockedDecrement(&session->dwIOCount) == 0)
 				{
 					DisconnectSession(session->SessionID);
 					SessionRelease(session->SessionID);
@@ -443,7 +437,7 @@ bool joshua::NetworkLibrary::PostRecv(st_SESSION* session)
 	{
 		if (WSAGetLastError() != ERROR_IO_PENDING)
 		{
-			if (InterlockedDecrement(&session->dwIOCount) <= 0)
+			if (InterlockedDecrement(&session->dwIOCount) == 0)
 			{
 				DisconnectSession(session->SessionID);
 				SessionRelease(session->SessionID);
