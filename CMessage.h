@@ -105,6 +105,7 @@ public:
 	{
 		CMessage* newMessage = g_PacketPool->Alloc();
 		newMessage->Clear();
+		InterlockedIncrement(&newMessage->m_lRefCount);
 		return newMessage;
 	}
 	//////////////////////////////////////////////////////////////////////////

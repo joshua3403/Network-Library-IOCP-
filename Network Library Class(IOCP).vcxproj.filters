@@ -27,9 +27,6 @@
     <ClInclude Include="CCrashDumpClass.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="CLog.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="CNetworkTest.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -43,6 +40,9 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="MemoryPool(LockFree).h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CLog.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

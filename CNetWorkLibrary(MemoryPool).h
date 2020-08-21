@@ -7,57 +7,47 @@
 #define READ 3
 #define WRITE 5
 #define MAX_CLIENT_COUNT 1000
-#define MAX_PACKET_COUNT 2000
 
 namespace joshua
 {
 
 
-	typedef struct st_WSAOVERLAPPED
-	{
-		// 3 = READ, 5 = WRITE
-		WSAOVERLAPPED Overlapped;
-		DWORD ID;
-	} NEWWSAOVERLAPPED, * LPNEWWSAOVERLAPPED;
-
 	struct st_SESSION
 	{
-		LPNEWWSAOVERLAPPED SendOverlapped;
-		LPNEWWSAOVERLAPPED RecvOverlapped;
-		RingBuffer* SendBuffer;
-		RingBuffer* RecvBuffer;
+		WSAOVERLAPPED SendOverlapped;
+		WSAOVERLAPPED RecvOverlapped;
+		RingBuffer SendBuffer;
+		RingBuffer RecvBuffer;
 		DWORD dwIOCount;
 		DWORD dwPacketCount;
 		LONG bIsSend;
+		LONG bIsReleased;
 		std::list<CMessage*> lMessageList;
+		BOOL bIsSendDisconnect;
+		
 
 		// SessionID가 0이면 사용하지 않는 세션
+		int index;
 		LONG64 SessionID;
 		SOCKET socket;
 		SOCKADDR_IN clientaddr;
 		st_SESSION()
 		{
-			SendBuffer = new RingBuffer();
-			RecvBuffer = new RingBuffer();
-			SendOverlapped = new NEWWSAOVERLAPPED;
-			RecvOverlapped = new NEWWSAOVERLAPPED;
-			SendOverlapped->ID = WRITE;
-			RecvOverlapped->ID = READ;
-			dwIOCount = dwPacketCount = SessionID = 0;
+			SendBuffer;
+			RecvBuffer;
+			dwIOCount = dwPacketCount = 0;
+			SessionID = 0;
 			bIsSend = FALSE;
 			socket = INVALID_SOCKET;
+			bIsReleased = FALSE;
+			bIsSendDisconnect = FALSE;
 			ZeroMemory(&clientaddr, sizeof(clientaddr));
+			index = 0;
 			//wprintf(L"session created\n");
 		}
 
 		~st_SESSION()
 		{
-			delete SendOverlapped;
-			delete RecvOverlapped;
-			delete SendBuffer;
-			delete RecvBuffer;
-			//wprintf(L"session deleted\n");
-
 		}
 
 	};
@@ -83,6 +73,8 @@ namespace joshua
 
 		CRITICAL_SECTION _IndexStackCS;
 
+		BOOL _bServerOn;
+
 
 	private:
 		// 소켓 초기화
@@ -107,6 +99,37 @@ namespace joshua
 		void AcceptThread(void);
 		void WorkerThread(void);
 
+		bool PostSend(st_SESSION* session);
+		bool PostRecv(st_SESSION* session);
+
+		void SessionRelease(st_SESSION* session);
+		void DisconnectSession(DWORD id);
+		joshua::st_SESSION* SessionReleaseCheck(LONG64 iSessionID);
+
+		// IOCP completion notice
+		void RecvComplete(st_SESSION* pSession, DWORD dwTransferred);
+		void SendComplete(st_SESSION* pSession, DWORD dwTransferred);
+
+	protected:
+		// Accept후 접속 처리 완료후 호출하는 함수
+		virtual void OnClientJoin(SOCKADDR_IN* sockAddr, DWORD sessionID) = 0;
+		virtual void OnClientLeave(DWORD sessionID) = 0;
+
+		// accept직후
+		// TRUE면 접속 허용
+		// FALSE면 접속 불허
+		virtual bool OnConnectionRequest(SOCKADDR_IN* sockAddr) = 0;
+
+		virtual void OnRecv(DWORD sessionID, CMessage* message) = 0;
+		virtual void OnSend(DWORD sessionID, int sendsize) = 0;
+
+		//	virtual void OnWorkerThreadBegin() = 0;                    
+		//	virtual void OnWorkerThreadEnd() = 0;                      
+
+		virtual void OnError(int errorcode, WCHAR*) = 0;
+
+		void SendPacket(LONG64 id, CMessage* message);
+		bool SendPacket_Dissconnect(LONG64 id, CMessage* message);
 	public:
 
 		NetworkLibrary()
@@ -129,37 +152,12 @@ namespace joshua
 			WSACleanup();
 		}
 
-		bool PostSend(st_SESSION* session);
-		bool PostRecv(st_SESSION* session);
-
-
 		BOOL Start(DWORD port, BOOL nagle, const WCHAR* ip = nullptr, DWORD threadCount = 0, DWORD MaxClient = 0);
 
 		void ReStart();
 
-		// Accept후 접속 처리 완료후 호출하는 함수
-		virtual void OnClientJoin(SOCKADDR_IN* sockAddr, DWORD sessionID) = 0; 
-		virtual void OnClientLeave(DWORD sessionID) = 0;
-
-		// accept직후
-		// TRUE면 접속 허용
-		// FALSE면 접속 불허
-		virtual bool OnConnectionRequest(SOCKADDR_IN* sockAddr) = 0; 
-
-		virtual void OnRecv(DWORD sessionID, CMessage* message) = 0; 
-		virtual void OnSend(DWORD sessionID, int sendsize) = 0;
-
-			//	virtual void OnWorkerThreadBegin() = 0;                    
-			//	virtual void OnWorkerThreadEnd() = 0;                      
-
-		virtual void OnError(int errorcode, WCHAR*) = 0;
-
-		void SessionRelease(DWORD id);
-
-		void SendPacket(DWORD id, CMessage* message);
-
 		void PrintPacketCount();
 
-		void DisconnectSession(DWORD id);
+
 	};
 }
