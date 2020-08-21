@@ -165,7 +165,8 @@ public:
 	}
 };
 
-#define LOG SYSLOGCLASS::GetInstance()->LOG
+#define LOG		SYSLOGCLASS::GetInstance()->LOG
+#define LOG_SET SYSLOGCLASS::GetInstance()->SET_LOG
 
 #define LOG_CONSOLE SYSLOGCLASS::e_CONSOLE
 #define LOG_FILE	SYSLOGCLASS::e_FILE

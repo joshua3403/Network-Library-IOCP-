@@ -2,7 +2,7 @@
 #include "stdafx.h"
 #include "CNewRingBuffer.h"
 #include "CMessage.h"
-//#include "CLog.h"
+#include "CLog.h"
 
 #define READ 3
 #define WRITE 5

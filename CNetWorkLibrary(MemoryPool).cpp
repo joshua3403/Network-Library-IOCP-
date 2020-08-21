@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "CNetWorkLibrary(MemoryPool).h"
-#include "CLog.h"
 
 BOOL joshua::NetworkLibrary::InitialNetwork(const WCHAR* ip, DWORD port, BOOL Nagle)
 {
@@ -351,12 +350,13 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* session)
 	}
 
 	WSABUF wsabuf[1000];
-	CMessage* pPacket = nullptr;
 
 	int iUsingSize = session->SendBuffer.GetUseSize();
 	int i = 0;
 	while (true)
 	{
+		CMessage* pPacket = nullptr;
+
 		if (iUsingSize == 0 || iUsingSize < 8)
 			break;
 
@@ -475,7 +475,6 @@ BOOL joshua::NetworkLibrary::Start(DWORD port, BOOL nagle, const WCHAR* ip, DWOR
 
 void joshua::NetworkLibrary::SessionRelease(st_SESSION* pSession)
 {
-
 	pSession->socket = INVALID_SOCKET;
 	ZeroMemory(&pSession->clientaddr, sizeof(SOCKADDR_IN));
 	if (pSession->SendBuffer.GetUseSize() > 0)
@@ -503,7 +502,8 @@ void joshua::NetworkLibrary::SessionRelease(st_SESSION* pSession)
 	pSession->SessionID = -1;
 	pSession->dwIOCount = 0;
 	pSession->bIsSend = FALSE;
-	InterlockedDecrement64(&_dwSessionCount);
+	pSession->bIsReleased = TRUE;
+	//InterlockedDecrement64(&_dwSessionCount);
 	PushIndex(pSession->index);
 }
 
