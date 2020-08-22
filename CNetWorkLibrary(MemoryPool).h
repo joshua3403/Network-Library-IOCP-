@@ -66,6 +66,8 @@ namespace joshua
 
 		// 입출력 완료 포트 생성// IOCP 변수
 		HANDLE _hCP;
+		HANDLE _AcceptThread;
+		int _iThreadCount;
 		LONG64 _dwSessionID;
 		std::vector<HANDLE> _ThreadVector;
 
@@ -144,6 +146,7 @@ namespace joshua
 			InitializeCriticalSection(&_IndexStackCS);
 			_bNagle = FALSE;
 			_dwCount = 0;
+			_iThreadCount = 0;
 		}
 		
 		~NetworkLibrary()
@@ -155,6 +158,8 @@ namespace joshua
 		}
 
 		BOOL Start(DWORD port, BOOL nagle, const WCHAR* ip = nullptr, DWORD threadCount = 0, DWORD MaxClient = 0);
+
+		void Stop();
 
 		void ReStart();
 

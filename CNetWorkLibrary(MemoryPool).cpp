@@ -68,14 +68,15 @@ BOOL joshua::NetworkLibrary::CreateThread(DWORD threadCount)
 	GetSystemInfo(&si);
 	HANDLE hThread = NULL;
 	//  Accept 스레드 생성
-	_ThreadVector.push_back((HANDLE)_beginthreadex(NULL, 0, AcceptThread, (LPVOID)this, NULL, NULL));
-	if (_ThreadVector[0] == NULL)
+	_AcceptThread = ((HANDLE)_beginthreadex(NULL, 0, AcceptThread, (LPVOID)this, NULL, NULL));
+	if (_AcceptThread == NULL)
 	{
 		return FALSE;
 	}
-	CloseHandle(_ThreadVector[0]);
+	CloseHandle(_AcceptThread);
 	// 스레드 제한
-	if (threadCount == NULL || threadCount > si.dwNumberOfProcessors * 2)
+	_iThreadCount = threadCount;
+	if (_iThreadCount == NULL || _iThreadCount > si.dwNumberOfProcessors * 2)
 	{
 		for (int i = 0; i < si.dwNumberOfProcessors * 2; i++)
 		{
@@ -85,10 +86,11 @@ BOOL joshua::NetworkLibrary::CreateThread(DWORD threadCount)
 			CloseHandle(hThread);
 			_ThreadVector.push_back(hThread);
 		}
+		_iThreadCount = si.dwNumberOfProcessors * 2;
 	}
 	else
 	{
-		for (int i = 0; i < threadCount; i++)
+		for (int i = 0; i < _iThreadCount; i++)
 		{
 			hThread = (HANDLE)_beginthreadex(NULL, 0, WorkerThread, (LPVOID)this, 0, NULL);
 			if (hThread == NULL)
@@ -159,11 +161,11 @@ DWORD joshua::NetworkLibrary::InsertSession(SOCKET sock, SOCKADDR_IN* sockaddr)
 		// TCP KeepAlive사용
 				// - SO_KEEPALIVE : 시스템 레지스트리 값 변경. 시스템의 모든 SOCKET에 대해서 KEEPALIVE 설정
 		// - SIO_KEEPALIVE_VALS : 특정 SOCKET만 KEEPALIVE 설정
-		//tcp_keepalive tcpkl;
-		//tcpkl.onoff = TRUE;
-		//tcpkl.keepalivetime = 30000; // ms
-		//tcpkl.keepaliveinterval = 1000;
-		//WSAIoctl(sock, SIO_KEEPALIVE_VALS, &tcpkl, sizeof(tcp_keepalive), 0, 0, NULL, NULL, NULL);
+		tcp_keepalive tcpkl;
+		tcpkl.onoff = TRUE;
+		tcpkl.keepalivetime = 30000; // ms
+		tcpkl.keepaliveinterval = 1000;
+		WSAIoctl(sock, SIO_KEEPALIVE_VALS, &tcpkl, sizeof(tcp_keepalive), 0, 0, NULL, NULL, NULL);
 		setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&_bNagle, sizeof(_bNagle));
 
 		InterlockedIncrement64(&_dwSessionCount);
@@ -199,6 +201,9 @@ void joshua::NetworkLibrary::AcceptThread(void)
 		SOCKET clientsocket;
 		SOCKADDR_IN clientaddr;
 		int addrlen = sizeof(clientaddr);
+
+		if (!_bServerOn)
+			break;
 
 		clientsocket = accept(_listen_socket, (SOCKADDR*)&clientaddr, &addrlen);
 		if (clientsocket == INVALID_SOCKET)
@@ -253,6 +258,7 @@ void joshua::NetworkLibrary::AcceptThread(void)
 	
 		PostRecv(&_SessionArray[index]);
 	}
+	LOG(L"SYSTEM", LOG_DEBUG, L"AcceptThread Exit");
 	return;
 }
 
@@ -268,6 +274,7 @@ void joshua::NetworkLibrary::WorkerThread(void)
 		cbTransferred = 0;
 		pOverlapped = 0;
 		pSession = 0;
+
 
 		// GQCS return 경우의 수.
 		// 1. IOCP Queue로부터 완료패킷을 얻어내는 데 성공한 경우 => TRUE 리턴, lpCompletionKey 세팅
@@ -462,6 +469,7 @@ BOOL joshua::NetworkLibrary::Start(DWORD port, BOOL nagle, const WCHAR* ip, DWOR
 	SYSLOGCLASS* _pLog = SYSLOGCLASS::GetInstance();
 	// 소켓 초기화
 	_dwSessionMax = MaxClient;
+	_bServerOn = TRUE;
 
 	if (InitialNetwork(ip, port, nagle) == false)
 	{
@@ -491,7 +499,6 @@ BOOL joshua::NetworkLibrary::Start(DWORD port, BOOL nagle, const WCHAR* ip, DWOR
 		return FALSE;
 	}
 
-	_bServerOn = TRUE;
 	return TRUE;
 }
 
@@ -544,6 +551,54 @@ void joshua::NetworkLibrary::SendPacket(LONG64 id, CMessage* message)
 		SessionRelease(pSession);
 
 	return;
+}
+
+void joshua::NetworkLibrary::Stop()
+{
+	SYSTEM_INFO si;
+	GetSystemInfo(&si);
+	_bServerOn = FALSE;
+
+	closesocket(_listen_socket);
+
+	WaitForSingleObject(_AcceptThread, INFINITE);
+
+	for (int i = 0; i < si.dwNumberOfProcessors * 2; i++)
+	{
+		PostQueuedCompletionStatus(_hCP, 0, 0, 0);
+	}
+
+	WaitForMultipleObjects(_iThreadCount, (HANDLE*)&_ThreadVector, TRUE, INFINITE);
+
+	WSACleanup();
+
+	CloseHandle(_hCP);
+
+	for (int i = 0; i < MAX_CLIENT_COUNT; i++)
+	{
+		if (_SessionArray[i].socket != INVALID_SOCKET)
+			SessionRelease(&_SessionArray[i]);
+	}
+
+	if (_SessionArray != NULL)
+	{
+		delete[] _SessionArray;
+		_SessionArray = NULL;
+	}
+
+	_listen_socket = INVALID_SOCKET;
+	_dwSessionID = 1;
+	_dwSessionCount = _dwSessionMax = 0;
+	_hCP = INVALID_HANDLE_VALUE;
+	ZeroMemory(&_serveraddr, sizeof(_serveraddr));
+	_bNagle = FALSE;
+	_dwCount = 0;
+	_iThreadCount = 0;
+	_ThreadVector.clear();
+	for (int i = 0; i < _ArrayIndex.size(); i++)
+	{
+		_ArrayIndex.pop();
+	}
 }
 
 void joshua::NetworkLibrary::PrintPacketCount()
