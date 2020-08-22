@@ -62,6 +62,7 @@ namespace joshua
 		DWORD _dwSessionMax;
 		LONG64 _dwCount;
 		DWORD packetCount;
+		BOOL _bNagle;
 
 		// 입출력 완료 포트 생성// IOCP 변수
 		HANDLE _hCP;
@@ -141,6 +142,7 @@ namespace joshua
 			_SessionArray = nullptr;
 			ZeroMemory(&_serveraddr, sizeof(_serveraddr));
 			InitializeCriticalSection(&_IndexStackCS);
+			_bNagle = FALSE;
 			_dwCount = 0;
 		}
 		

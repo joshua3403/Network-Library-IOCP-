@@ -166,6 +166,10 @@
     <ClCompile Include="CExceptClass.cpp" />
     <ClCompile Include="CMessage.cpp" />
     <ClCompile Include="CNetWorkLibrary(MemoryPool).cpp" />
+    <ClCompile Include="CNetWorkLibrary.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="CNetworkTest.cpp" />
     <ClCompile Include="CNewRingBuffer.cpp" />
     <ClCompile Include="Main.cpp" />

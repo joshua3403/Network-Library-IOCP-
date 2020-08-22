@@ -7,12 +7,10 @@ BOOL joshua::NetworkLibrary::InitialNetwork(const WCHAR* ip, DWORD port, BOOL Na
 	int retval;
 	bool fail = false;
 
-	SYSLOGCLASS* _pLog = SYSLOGCLASS::GetInstance();
-
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 	{
-		_pLog->LOG(L"SERVER", LOG_LEVEL::e_ERROR, L"%s\n", L"WSAStartup() Error!");
+		LOG(L"SERVER", LOG_ERROR, L"%s\n", L"WSAStartup() Error!");
 		return fail;
 	}
 
@@ -20,7 +18,7 @@ BOOL joshua::NetworkLibrary::InitialNetwork(const WCHAR* ip, DWORD port, BOOL Na
 	_listen_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (_listen_socket == INVALID_SOCKET)
 	{
-		_pLog->LOG(L"SERVER", LOG_LEVEL::e_ERROR, L"%s\n", L"socket() Error!");
+		LOG(L"SERVER", LOG_ERROR, L"%s\n", L"socket() Error!");
 		return fail;
 	}
 
@@ -35,7 +33,7 @@ BOOL joshua::NetworkLibrary::InitialNetwork(const WCHAR* ip, DWORD port, BOOL Na
 	retval = bind(_listen_socket, (SOCKADDR*)&_serveraddr, sizeof(_serveraddr));
 	if (retval == SOCKET_ERROR)
 	{
-		_pLog->LOG(L"SERVER", LOG_LEVEL::e_ERROR, L"%s\n", L"bind() Error!");
+		LOG(L"SERVER", LOG_ERROR, L"%s\n", L"bind() Error!");
 		return fail;
 	}
 
@@ -56,7 +54,7 @@ BOOL joshua::NetworkLibrary::InitialNetwork(const WCHAR* ip, DWORD port, BOOL Na
 	retval = listen(_listen_socket, SOMAXCONN);
 	if (retval == SOCKET_ERROR)
 	{
-		_pLog->LOG(L"SERVER", LOG_LEVEL::e_ERROR, L"%s\n", L"listen() Error!");
+		LOG(L"SERVER", LOG_ERROR, L"%s\n", L"listen() Error!");
 		return fail;
 	}
 	return (!fail);
