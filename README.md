@@ -35,19 +35,17 @@
                                   
      1. IOCP Queue로부터 완료패킷을 얻어내는 데 성공한 경우 => TRUE 리턴, lpCompletionKey 세팅
 
-		 2. IOCP Queue로부터 완료패킷을 얻어내는 데 실패한 경우와 동시에 lpOverlapped가 NULL인 경우 => FALSE 리턴
+     2. IOCP Queue로부터 완료패킷을 얻어내는 데 실패한 경우와 동시에 lpOverlapped가 NULL인 경우 => FALSE 리턴
 
-		 3. IOCP Queue로부터 완료패킷을 얻어내는 데 성공한 경우와 동시에 
-			  lpOverlapped가 NULL이 아닌 경우이면서 
-		    dequeue한 요소가 실패한 I/O인 경우
-		 => FALSE리턴, lpCompletionKey 세팅
+     3. IOCP Queue로부터 완료패킷을 얻어내는 데 성공한 경우와 동시에 lpOverlapped가 NULL이 아닌 경우이면서 dequeue한 요소가 실패한 I/O인 경우
+	=> FALSE리턴, lpCompletionKey 세팅
 
-		 4. IOCP에 등록된 소켓이 close된 경우
-		 => FALSE 리턴, lpOverlapped에 NULL이 아니고,
-		 => lpNumberOfBytes에 0 세팅.
+     4. IOCP에 등록된 소켓이 close된 경우
+	=> FALSE 리턴, lpOverlapped에 NULL이 아니고,
+	=> lpNumberOfBytes에 0 세팅.
 
-		 5. 정상종료 (PQCS)
-     		 => lpCompletionKey는 NULL, lpOverlapped는 NULL, lpNumberOfBytes또한 NULL
+     5. 정상종료 (PQCS)
+     	=> lpCompletionKey는 NULL, lpOverlapped는 NULL, lpNumberOfBytes또한 NULL
          
      1번의 경우는 정상적인 작동, 문제 없음.
      2번의 경우는 GQCS에러 에러코드 확인하고 지금은 서버를 끄는 쪽으로 해결하자.
@@ -56,11 +54,11 @@
 
 - 2. Shutdown()에 대해서.
 
-	    shutdown() 함수는 4HandShake(1Fin - 2Ack+3Fin - 4Fin)에서 1Fin을 보내는 함수
-	   1. 상대편에서 이에 대한 Ack를 보내지 않으면(대게 상대방이 '응답없음'으로 먹통됐을 경우) 종료가 되지 않음
-	     - 이 현상(연결 끊어야하는데 안끊어지는 경우)이 지속되면 메모리가 순간적으로 증가하고 SendBuffer가 터질 수 있음
-	   2. TimeWait이 남음
-	     - CancelIoEx 사용하여 4HandShake를 무시하고 닫아야 남지 않는다
+     shutdown() 함수는 4HandShake(1Fin - 2Ack+3Fin - 4Fin)에서 1Fin을 보내는 함수
+     1. 상대편에서 이에 대한 Ack를 보내지 않으면(대게 상대방이 '응답없음'으로 먹통됐을 경우) 종료가 되지 않음
+	- 이 현상(연결 끊어야하는데 안끊어지는 경우)이 지속되면 메모리가 순간적으로 증가하고 SendBuffer가 터질 수 있음
+     2. TimeWait이 남음
+	   - CancelIoEx 사용하여 4HandShake를 무시하고 닫아야 남지 않는다
        
 - 3. CancelIoEX()에 대해서
-	    shutdown으로는 닫을 수 없을 경우 사용 (SendBuffer가 가득 찼을때, Heartbeat가 끊어졌을때)
+      shutdown으로는 닫을 수 없을 경우 사용 (SendBuffer가 가득 찼을때, Heartbeat가 끊어졌을때)
