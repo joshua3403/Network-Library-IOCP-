@@ -107,8 +107,6 @@ private :
 
 };
 
-
-
 template<class DATA>
 inline CFreeList<DATA>::CFreeList(int iBlockNum, bool bPlacementNew)
 {
@@ -135,7 +133,6 @@ inline CFreeList<DATA>::CFreeList(int iBlockNum, bool bPlacementNew)
 			newNode = new(newBlock) st_BLOCK_NODE;
 			newNode->stpNextBlock = this->_pFreeNode->stpNextBlock;
 			this->_pFreeNode->stpNextBlock = newNode;
-			newObject = new((char*)newBlock + sizeof(st_BLOCK_NODE)) DATA;			
 			count--;
 			//wprintf(L"CFreeList() : MemoryPool Header Pointer : %p, newNode Pointer : %p newObject Pointer : %p\n", this->_pFreeNode->stpNextBlock, newNode, newObject);
 

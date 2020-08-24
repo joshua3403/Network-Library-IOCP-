@@ -1,0 +1,45 @@
+랜 서버로 다시 돌아오자.
+IOCount는 overlapped가 걸려있는데 release되는걸 막기 위해.
+Session을 배열로 가져간다.
+잘못된 세션에 접근.
+별도의 스레드에서 세션에 접근하고자 하는데 session이 오염될 경우. => 릴리즈 된 세션에 대한 다른 스레드의 접근
+내가 행위를 한다 치면 interlock으로 다른 스레드의 접근을 막자.
+
+다수의 세션과 적은 수의 스레드가 있으면 경합이 적게 발생 => LockFree의 이점 별로 없음.
+IOCount의 확장 => Session의 접근, 사용시 증가시키자 => 참조 카운트
+RecvQ => 무조건 하나.
+
+세션의 동기화 문제는 SendQ만 있다. 이는 자료구조 동기화 해결로 해결하자
+그러면 Session의 동기화 문제는? 우선 우리는 Session에 동시에 접근 가능하게 하자.
+누군가 Session을 사용하고 있으면 Session을 Release하지 말자.
+
+GQCS 완료 통지가 온 경우는 IOCount를 물고 왔기 때문에 문제 없다.
+
+문제는 Disconnect()와, SendPacket() <= 외부에서 요청하는 방법.
+
+Disconnect(SessionID)
+{
+ 세션 = 세션 ID 검색
+---- 이미 Release중이거나 된 경우가 있다.-----
+ if(세션-IOCount++ == 1) <-----------다른 스레드가 동시에 접근하면 IOCount가 1이상이 나와버린다.
+ {
+  ReleaseFlag를 다시 확인.
+  if(IOCount-- == 0)
+    Release();
+
+Release()
+{
+if(IOCount != 0 && ReleaseFlag == FALSE) => interlocked compare exchange128
+{
+ ReleaseFlag = TRUE;
+ Release진행
+return; 
+
+Release와 Disconnect서로 양보해야 한다.
+
+세션마다 Release Flag 필요.
+
+세션 = 세션 확득(세션 ID)
+
+들어온 세션에 대해 특정 데이터를 1회 SendPacket()하자.
+OnclientJoin에서 SendPacket실행.

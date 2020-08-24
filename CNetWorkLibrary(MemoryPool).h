@@ -106,7 +106,7 @@ namespace joshua
 		bool PostRecv(st_SESSION* session);
 
 		void SessionRelease(st_SESSION* session);
-		void DisconnectSession(DWORD id);
+		void DisconnectSession(st_SESSION* pSession);
 		joshua::st_SESSION* SessionReleaseCheck(LONG64 iSessionID);
 
 		// IOCP completion notice

@@ -36,19 +36,19 @@ BOOL joshua::NetworkLibrary::InitialNetwork(const WCHAR* ip, DWORD port, BOOL Na
 		return fail;
 	}
 
-	//// 소켓 Send버퍼의 크기를 0으로 만들자
-	//int optval;
+	// 소켓 Send버퍼의 크기를 0으로 만들자
+	int optval;
 
-	//int optlen = sizeof(optval);
+	int optlen = sizeof(optval);
 
-	//getsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
+	getsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
 
-	//optval = 0;
+	optval = 0;
 
-	//setsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
+	setsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
 
-	//getsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
-	//wprintf(L"sendbuf size : %d\n", optval);
+	getsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
+	wprintf(L"sendbuf size : %d\n", optval);
 
 	setsockopt(_listen_socket, IPPROTO_TCP, TCP_NODELAY, (char*)&Nagle, sizeof(Nagle));
 
@@ -315,7 +315,7 @@ void joshua::NetworkLibrary::WorkerThread(void)
 
 		if (cbTransferred == 0)
 		{
-			shutdown(pSession->socket, SD_BOTH);
+			DisconnectSession(pSession);
 		}
 		else
 		{
@@ -408,7 +408,7 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* session)
 			if(error != 10038 && error != 10053 && error != 10054 && error != 10058)
 				LOG(L"SYSTEM", LOG_ERROR, L"WSASend() # failed%d / Socket:%d / IOCnt:%d / SendQ Size:%d", error, session->socket, session->dwIOCount, session->SendBuffer.GetUseSize());
 
-			shutdown(session->socket, SD_BOTH);
+			DisconnectSession(session);
 			if (InterlockedDecrement(&session->dwIOCount) == 0)
 				SessionRelease(session);
 
@@ -451,7 +451,7 @@ bool joshua::NetworkLibrary::PostRecv(st_SESSION* pSession)
 			if (error != 10038 && error != 10053 && error != 10054 && error != 10058)
 				LOG(L"SYSTEM", LOG_ERROR, L"WSASend() # failed%d / Socket:%d / IOCnt:%d / SendQ Size:%d", error, pSession->socket, pSession->dwIOCount, pSession->SendBuffer.GetUseSize());
 
-			shutdown(pSession->socket, SD_BOTH);
+			DisconnectSession(pSession);
 			if (InterlockedDecrement(&pSession->dwIOCount) == 0)
 				SessionRelease(pSession);
 
@@ -523,7 +523,6 @@ void joshua::NetworkLibrary::SessionRelease(st_SESSION* pSession)
 			itor = pSession->lMessageList.erase(itor);
 		}
 	}
-
 
 	pSession->RecvBuffer.ClearBuffer();
 	pSession->SendBuffer.ClearBuffer();
@@ -606,24 +605,15 @@ void joshua::NetworkLibrary::PrintPacketCount()
 	wprintf(L"SessionCount : %ld, Allock Count : %d\n", _dwSessionCount, CMessage::g_PacketPool->GetAllocCount());
 }
 
-void joshua::NetworkLibrary::DisconnectSession(DWORD id)
+void joshua::NetworkLibrary::DisconnectSession(st_SESSION* pSession)
 {
 	LINGER optval;
 	int retval;
 	optval.l_onoff = 1;
 	optval.l_linger = 0;
 
-	int index = 0;
-	for (int i = 0; i < MAX_CLIENT_COUNT; i++)
-	{
-		if (id == _SessionArray[i].SessionID)
-		{
-			index = i;
-			break;
-		}
-	}
-	retval = setsockopt(_SessionArray[index].socket, SOL_SOCKET, SO_LINGER, (char*)&optval, sizeof(optval));
-	closesocket(_SessionArray[index].socket);
+	retval = setsockopt(pSession->socket, SOL_SOCKET, SO_LINGER, (char*)&optval, sizeof(optval));
+	closesocket(pSession->socket);
 
 }
 
@@ -695,7 +685,7 @@ void joshua::NetworkLibrary::RecvComplete(st_SESSION* pSession, DWORD dwTransfer
 
 		if(wHeader != 8)
 		{			// Header의 Payload의 길이가 실제와 다름
-			shutdown(pSession->socket, SD_BOTH);
+			DisconnectSession(pSession);
 			LOG(L"SYSTEM", LOG_WARNNING, L"Header Error");
 			break;
 		}
@@ -703,7 +693,7 @@ void joshua::NetworkLibrary::RecvComplete(st_SESSION* pSession, DWORD dwTransfer
 		if (iRecvSize < sizeof(wHeader) + wHeader)
 		{
 			// Header의 Payload의 길이가 실제와 다름
-			shutdown(pSession->socket, SD_BOTH);
+			DisconnectSession(pSession);
 			LOG(L"SYSTEM", LOG_WARNNING, L"Header & PayloadLength mismatch");
 			break;
 		}
@@ -716,7 +706,7 @@ void joshua::NetworkLibrary::RecvComplete(st_SESSION* pSession, DWORD dwTransfer
 		if (pPacket->GetBufferSize() < wHeader)
 		{
 			pPacket->SubRef();
-			shutdown(pSession->socket, SD_BOTH);
+			DisconnectSession(pSession);
 			LOG(L"SYSTEM", LOG_WARNNING, L"PacketBufferSize < PayloadSize ");
 			break;
 		}
@@ -727,7 +717,7 @@ void joshua::NetworkLibrary::RecvComplete(st_SESSION* pSession, DWORD dwTransfer
 		{
 			pPacket->SubRef();
 			LOG(L"SYSTEM", LOG_WARNNING, L"RecvQ dequeue error");
-			shutdown(pSession->socket, SD_BOTH);
+			DisconnectSession(pSession);
 			break;
 		}
 
@@ -756,7 +746,7 @@ void joshua::NetworkLibrary::SendComplete(st_SESSION* pSession, DWORD dwTransfer
 	}
 
 	if (pSession->bIsSendDisconnect == TRUE)
-		shutdown(pSession->socket, SD_BOTH);
+		DisconnectSession(pSession);
 
 	InterlockedExchange(&pSession->bIsSend, FALSE);
 	PostSend(pSession);

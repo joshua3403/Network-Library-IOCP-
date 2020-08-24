@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CNetworkTest.h"
+#include <crtdbg.h>
 
 Network testNet;
 
@@ -7,9 +8,9 @@ bool ServerControl();
 
 int main()
 {
-
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	LOG_SET(LOG_CONSOLE | LOG_FILE, LOG_DEBUG);
-	CMessage::SetMemoryPool(1000, FALSE);
+	CMessage::SetMemoryPool(0, TRUE);
 
 	testNet.Start(6000,TRUE,NULL,NULL,500);
 
