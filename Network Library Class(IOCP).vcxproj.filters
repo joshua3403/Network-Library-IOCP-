@@ -36,13 +36,13 @@
     <ClInclude Include="CNetWorkLibrary(MemoryPool).h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="CNewRingBuffer.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="MemoryPool(LockFree).h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="CLog.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CNewRingBuffer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
@@ -66,6 +66,9 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="CNewRingBuffer.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CCrashDump.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="CNetWorkLibrary.cpp">

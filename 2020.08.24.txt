@@ -1,4 +1,4 @@
-랜 서버로 다시 돌아오자.
+ 랜 서버로 다시 돌아오자.
 IOCount는 overlapped가 걸려있는데 release되는걸 막기 위해.
 Session을 배열로 가져간다.
 잘못된 세션에 접근.

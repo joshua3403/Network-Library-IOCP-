@@ -337,8 +337,6 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* session)
 			InterlockedExchange(&session->bIsSend, FALSE);
 			return true;
 		}
-		// 사용량으로 분기 놔눠서 보내자
-		//if ((session->SendBuffer->GetUseSize() / 8) <= MAX_PACKET_COUNT)
 		{
 			int i = 0;
 			while (session->SendBuffer->GetUseSize() > 0)

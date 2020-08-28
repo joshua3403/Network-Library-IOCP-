@@ -157,8 +157,10 @@ int RingBuffer::Get(char* chpDest, int iSize)
 {
 	int iRead;
 
-	if (GetUseSize() < iSize)
-		iSize = GetUseSize();
+	int realsize = GetUseSize();
+
+	if (realsize < iSize)
+		iSize = realsize;
 
 	if (0 >= iSize)
 		return 0;
@@ -190,8 +192,11 @@ int RingBuffer::Get(char* chpDest, int iSize)
 int	RingBuffer::Peek(char* chpDest, int iSize)
 {
 	int iRead;
-	if (GetUseSize() < iSize)
-		iSize = GetUseSize();
+
+	int realsize = GetUseSize();
+
+	if (realsize < iSize)
+		iSize = realsize;
 
 	if (0 >= iSize)
 		return 0;

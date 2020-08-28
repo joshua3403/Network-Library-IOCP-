@@ -163,14 +163,13 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CCrashDump.cpp" />
     <ClCompile Include="CExceptClass.cpp" />
     <ClCompile Include="CMessage.cpp" />
     <ClCompile Include="CNetWorkLibrary(MemoryPool).cpp" />
     <ClCompile Include="CNetWorkLibrary.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="CNetworkTest.cpp" />
     <ClCompile Include="CNewRingBuffer.cpp" />

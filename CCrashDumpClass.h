@@ -1,24 +1,21 @@
 #pragma once
-#include <Windows.h>
-#include <crtdbg.h>
-#include <psapi.h>
-#include <stdio.h>
-#include <DbgHelp.h>
+#include "stdafx.h"
 
 class CCrashDump
 {
 public:
 	CCrashDump()
 	{
-		_lDumpCount = 0;
 		_invalid_parameter_handler oldHandler, newHandler;
 
-		oldHandler = myInvalidParameterHandler;
+		newHandler = myInvalidParameterHandler;
 
 		oldHandler = _set_invalid_parameter_handler(newHandler);
 		_CrtSetReportMode(_CRT_WARN, 0);
 		_CrtSetReportMode(_CRT_ASSERT, 0);
 		_CrtSetReportMode(_CRT_ERROR, 0);
+
+		_CrtSetReportHook(_custom_Report_hook);
 
 		// pure virtual function called 에러 핸들러를 사용자 정의 함수로 우회시킨다.
 		_set_purecall_handler(myPurecallHandler);
@@ -59,7 +56,7 @@ public:
 		WCHAR filename[MAX_PATH];
 
 		GetLocalTime(&stNowTime);
-		wsprintf(filename, L"Dump_%d%02d%02d_%02d.%02d.%02d_%d_%dMP.dmp", stNowTime.wYear, stNowTime.wMonth, stNowTime.wDay, stNowTime.wHour, stNowTime.wMinute, stNowTime.wSecond, DumpCount);
+		wsprintf(filename, L"Dump_%d%02d%02d_%02d.%02d.%02d_%d_%dMP.dmp", stNowTime.wYear, stNowTime.wMonth, stNowTime.wDay, stNowTime.wHour, stNowTime.wMinute, stNowTime.wSecond, DumpCount, iWorkingMemory);
 
 		wprintf(L"\n\n\n!!! Crash Error !!! %d.%d.%d / %d:%d%d\n", stNowTime.wYear, stNowTime.wMonth, stNowTime.wDay, stNowTime.wHour, stNowTime.wMinute, stNowTime.wSecond);
 
@@ -109,5 +106,17 @@ public:
 		Crash();
 	}
 
+	static CCrashDump* GetInstance()
+	{
+		static CCrashDump Inst;
+		return &Inst;
+	}
+
+
+
 	static long _lDumpCount;
 };
+
+
+#define CRASH CCrashDump::GetInstance()->Crash
+
