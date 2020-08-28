@@ -85,7 +85,6 @@ namespace joshua
 		LONG64 _dwSessionCount;
 		LONG64 _dwSessionMax;
 		LONG64 _dwCount;
-		DWORD packetCount;
 
 		// Thread
 		HANDLE _AcceptThread;
@@ -100,6 +99,10 @@ namespace joshua
 
 		CRITICAL_SECTION _IndexStackCS;
 
+		LONG64 _lSendTPS;
+		LONG64 _lRecvTPS;
+		LONG64 _lAcceptTPS;
+		LONG64 _lAcceptCount;
 
 
 	private:
@@ -171,6 +174,10 @@ namespace joshua
 			_bNagle = FALSE;
 			_dwCount = 0;
 			_iThreadCount = 0;
+			_lSendTPS = 0;
+			_lRecvTPS = 0;
+			_lAcceptTPS = 0;
+			_lAcceptCount = 0;
 		}
 		
 		~NetworkLibrary()
