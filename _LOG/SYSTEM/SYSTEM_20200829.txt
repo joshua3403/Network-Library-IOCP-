@@ -1,0 +1,13 @@
+[SYSTEM] [2020-08-29 00:06:56 / ERROR / 00000001] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:56 / ERROR / 00000002] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:56 / ERROR / 00000003] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:56 / ERROR / 00000004] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:56 / ERROR / 00000005] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:56 / ERROR / 00000006] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:56 / ERROR / 00000007] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:57 / ERROR / 00000008] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:57 / ERROR / 00000009] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:57 / ERROR / 00000010] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:57 / ERROR / 00000011] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:57 / ERROR / 00000012] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-29 00:06:57 / ERROR / 00000013] AcceptThread() - CreateIoCompletionPort() failed : 6

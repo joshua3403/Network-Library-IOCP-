@@ -18,3 +18,7 @@
 [SYSTEM] [2020-08-28 12:35:21 / ERROR / 00000006] WSASend() # failed10014 / Socket:992 / IOCnt:3 / SendQ Size:0
 [SYSTEM] [2020-08-28 15:27:49 / ERROR / 00000001] AcceptThread() - CreateIoCompletionPort() failed : 6
 [SYSTEM] [2020-08-28 15:35:05 / ERROR / 00000001] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-28 22:35:43 / WARNNING / 00000001] Header Error
+[SYSTEM] [2020-08-28 23:46:02 / ERROR / 00000001] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-28 23:46:02 / ERROR / 00000002] AcceptThread() - CreateIoCompletionPort() failed : 6
+[SYSTEM] [2020-08-28 23:46:03 / ERROR / 00000003] AcceptThread() - CreateIoCompletionPort() failed : 6

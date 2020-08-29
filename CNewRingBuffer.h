@@ -6,7 +6,7 @@ class RingBuffer
 public:
 	enum
 	{
-		DEFAULT_SIZE = 30008,
+		DEFAULT_SIZE = 40008,
 		BLANK_SIZE = 8
 	};
 

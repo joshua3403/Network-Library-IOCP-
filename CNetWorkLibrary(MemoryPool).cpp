@@ -241,14 +241,14 @@ void joshua::NetworkLibrary::AcceptThread(void)
 			continue;
 		}
 		// 소켓과 입출력 완료 포트 연결
-		if (CreateIoCompletionPort((HANDLE)pSession->socket, (HANDLE)_hCP, (ULONG_PTR)pSession, 0) == NULL)
+		if (CreateIoCompletionPort((HANDLE)clientsocket, (HANDLE)_hCP, (ULONG_PTR)pSession, 0) == NULL)
 		{
 			//  HANDLE 인자에 소켓이 아닌 값이 올 경우 잘못된 핸들(6번 에러) 발생
 			// 소켓이 아닌 값을 넣었다는 것은 다른 스레드에서 소켓을 반환했다는 의미이므로 동기화 문제일 가능성이 높다.
 			LOG(L"SYSTEM", LOG_ERROR, L"AcceptThread() - CreateIoCompletionPort() failed : %d", WSAGetLastError());
 			if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 			{
-				DisconnectSession(pSession);
+				//DisconnectSession(pSession);
 				SessionRelease(pSession);
 				continue;
 			}
@@ -323,7 +323,12 @@ void joshua::NetworkLibrary::WorkerThread(void)
 
 		if (cbTransferred == 0)
 		{
-			DisconnectSession(pSession);
+			if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+			{
+				SessionRelease(pSession);
+			}
+			continue;
+			//DisconnectSession(pSession);
 		}
 		else
 		{
@@ -365,7 +370,7 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* pSession)
 		break;
 	}
 
-	WSABUF wsaBuf[1000];
+	WSABUF wsaBuf[2000];
 
 	int i = 0; 
 	int usingSize = pSession->SendBuffer.GetUseSize();
@@ -495,7 +500,7 @@ void joshua::NetworkLibrary::SessionRelease(st_SESSION* pSession)
 	if (!InterlockedCompareExchange128((LONG64*)pSession->lIO, TRUE, 0, (LONG64*)&temp))
 		return;
 
-	//DisconnectSession(pSession);
+	DisconnectSession(pSession);
 
 	OnClientLeave(pSession->SessionID);
 
