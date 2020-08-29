@@ -22,7 +22,7 @@
         LockFree알고리즘은 모든 스레드가 하나의 행동을 동시해 시도하면서 실행에 성공한 스레드는 하나씩 빠져나가는 구조.
         이것이 성능상에 이점이 있는지는 아직 논의가 필요하다.
 
-- 5단계. Client가 Accept함수로 접속한 후 OnclientAccept함수가 호출될텐데 여기서 우리는 로그인 패킷을 전송해 줄 것이다. 이는 간단하지만, 내부에서 SendPacket을 호출할 것이고,
+- 5단계. Client가 Accept함수로 접속한 후 OnclientAccept함수가 호출될텐데 여기서 우리는 로그인 패킷을 전송해 줄 것이다.  내부에서 SendPacket을 호출할 것이고,
         SendPacket을 호출하는 과정에서 우리는 ID로 Session을 찾는 과정에서 찾은 Session이 유효한 세션인지 확인을 할 것이다. 어떻게? 지금부터 IOCount는 Reference Counter역할을 할 것	  이다. IOCount를 증가시켰을 때 1인경우는 Release될 세션이라고 생각할 수 있을 것이다. 그렇다면 다시 IOCount를 내려 0이 된다면 ReleaseSession. 또한 ReleaseFlag가 TRUE라면 이미 	       해제된 세션, FALSE라면 유효한 세션일 것이다. 또한 ReleaseSession에서 파라미터로 전달된 세션이 정말 해제될 세션인지 우리는 확인할 필요가 있다. 어떻게? IOCount와 ReleaseFlag를 	     확인해서. 두 변수를 InterlockedCompareExchange128함수를 통해 원자적으로 확인해야 한다. IOCount가 0이며 ReleaseFlag가 FALSE면 ReleaseSession과정에 돌입한다.
         ------------------------------------------------------------- 현재까지의 작업(2020,08,29) ------------------------------------------------------------------
 
