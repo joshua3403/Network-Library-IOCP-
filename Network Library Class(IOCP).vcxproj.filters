@@ -30,9 +30,6 @@
     <ClInclude Include="CNetworkTest.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="MemoryPool_mail.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="CNetWorkLibrary(MemoryPool).h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -43,6 +40,9 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="CNewRingBuffer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Stack(LockFree).h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

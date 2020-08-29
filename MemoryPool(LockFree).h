@@ -21,7 +21,7 @@
 
 
 template <class DATA>
-class CFreeList
+class CLFFreeList
 {
 private:
 
@@ -53,8 +53,8 @@ public:
 	//				(bool) Alloc 시 생성자 / Free 시 파괴자 호출 여부
 	// Return:
 	//////////////////////////////////////////////////////////////////////////
-			CFreeList(int iBlockNum, bool bPlacementNew = false);
-	virtual	~CFreeList();
+	CLFFreeList(int iBlockNum, bool bPlacementNew = false);
+	virtual	~CLFFreeList();
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -107,7 +107,7 @@ private :
 
 
 template<class DATA>
-inline CFreeList<DATA>::CFreeList(int iBlockNum, bool bPlacementNew)
+inline CLFFreeList<DATA>::CLFFreeList(int iBlockNum, bool bPlacementNew)
 {
 	// 새로히 생성할 객체 블럭
 	DATA* newObject = nullptr;
@@ -145,7 +145,7 @@ inline CFreeList<DATA>::CFreeList(int iBlockNum, bool bPlacementNew)
 }
 
 template<class DATA>
-inline CFreeList<DATA>::~CFreeList()
+inline CLFFreeList<DATA>::~CLFFreeList()
 {
 	st_BLOCK_NODE* temp;
 
@@ -160,7 +160,7 @@ inline CFreeList<DATA>::~CFreeList()
 }
 
 template<class DATA>
-inline DATA* CFreeList<DATA>::Alloc(void)
+inline DATA* CLFFreeList<DATA>::Alloc(void)
 {
 	// 새로히 생성할 객체 블럭
 	DATA* newObject = nullptr;
@@ -196,7 +196,7 @@ inline DATA* CFreeList<DATA>::Alloc(void)
 }
 
 template<class DATA>
-inline bool CFreeList<DATA>::Free(DATA* pData)
+inline bool CLFFreeList<DATA>::Free(DATA* pData)
 {
 	st_BLOCK_NODE* returnedBlock = ((st_BLOCK_NODE*)pData) - 1;
 	st_TOP_NODE CloneTop;

@@ -1,6 +1,7 @@
 #pragma once
 #include "stdafx.h"
 #include "CNewRingBuffer.h"
+#include "Stack(LockFree).h"
 #include "CMessage.h"
 #include "CLog.h"
 

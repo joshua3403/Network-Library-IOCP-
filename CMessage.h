@@ -1,7 +1,7 @@
 #pragma once
 #include "stdafx.h"
 #include "CExceptClass.h"
-#include "MemoryPool_mail.h"
+#include "MemoryPool(LockFree).h"
 class CMessage
 {
 	/*---------------------------------------------------------------
@@ -25,7 +25,7 @@ private:
 	int m_iUsingSize;
 	char* m_cpBuffer;
 	LONG m_lRefCount;
-	friend class CFreeList<CMessage>;
+	friend class CLFFreeList<CMessage>;
 	CRITICAL_SECTION m_CS;
 
 private:
@@ -69,7 +69,7 @@ private:
 	}
 
 public:
-	static CFreeList<CMessage>* g_PacketPool;
+	static CLFFreeList<CMessage>* g_PacketPool;
 
 public:
 
@@ -91,7 +91,7 @@ public:
 	{
 		if (g_PacketPool == nullptr)
 		{
-			g_PacketPool = new CFreeList<CMessage>(count, bPlacementNew);
+			g_PacketPool = new CLFFreeList<CMessage>(count, bPlacementNew);
 			atexit(Destroy);
 		}
 	}
