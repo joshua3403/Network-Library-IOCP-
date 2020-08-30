@@ -163,6 +163,7 @@
     <ClInclude Include="CNetworkTest.h" />
     <ClInclude Include="CNewRingBuffer.h" />
     <ClInclude Include="MemoryPool(LockFree).h" />
+    <ClInclude Include="Queue(LockFree).h" />
     <ClInclude Include="Stack(LockFree).h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>

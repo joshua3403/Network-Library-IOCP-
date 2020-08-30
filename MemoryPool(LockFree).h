@@ -174,6 +174,10 @@ inline DATA* CLFFreeList<DATA>::Alloc(void)
 	{
 		newNode = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE) + sizeof(DATA));
 		InterlockedIncrement64(&m_lMaxCount);
+
+		newObject = (DATA*)(newNode + 1);
+		new (newObject)DATA;
+		return newObject;
 	}
 	else
 	{
@@ -208,6 +212,9 @@ inline bool CLFFreeList<DATA>::Free(DATA* pData)
 		CloneTop.lCount = _pTop->lCount;
 		returnedBlock->stpNextBlock = _pTop->pTopNode;
 	} while (!InterlockedCompareExchange128((LONG64*)_pTop, newCount, (LONG64)returnedBlock, (LONG64*)&CloneTop));
+
+	if (m_bUsingPlacementNew)
+		pData->~DATA();
 
 	InterlockedDecrement64(&m_lUseCount);
 

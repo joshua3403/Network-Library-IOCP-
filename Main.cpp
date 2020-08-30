@@ -8,7 +8,7 @@ bool ServerControl();
 int main()
 {
 	LOG_SET(LOG_CONSOLE | LOG_FILE, LOG_DEBUG);
-	CMessage::SetMemoryPool(0, TRUE);
+	CMessage::SetMemoryPool(0, FALSE);
 
 	testNet.Start(6000,TRUE,NULL,8, 1000);
 

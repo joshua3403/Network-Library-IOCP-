@@ -37,18 +37,18 @@ BOOL joshua::NetworkLibrary::InitialNetwork(const WCHAR* ip, DWORD port, BOOL Na
 		return fail;
 	}
 
-	//// 소켓 Send버퍼의 크기를 0으로 만들자
+	// 소켓 Send버퍼의 크기를 0으로 만들자
 	//int optval;
 
 	//int optlen = sizeof(optval);
 
-	//getsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
+	//getsockopt(_slisten_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
 
 	//optval = 0;
 
-	//setsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
+	//setsockopt(_slisten_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
 
-	//getsockopt(_listen_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
+	//getsockopt(_slisten_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
 	//wprintf(L"sendbuf size : %d\n", optval);
 
 	setsockopt(_slisten_socket, IPPROTO_TCP, TCP_NODELAY, (char*)&Nagle, sizeof(Nagle));
@@ -161,7 +161,7 @@ joshua::st_SESSION* joshua::NetworkLibrary::InsertSession(SOCKET sock, SOCKADDR_
 		pSession->socket = sock;
 		pSession->bIsSend = FALSE;
 		pSession->dwPacketCount = 0;
-		pSession->SendBuffer.ClearBuffer();
+		pSession->SendBuffer.Clear();
 		pSession->RecvBuffer.ClearBuffer();
 		pSession->lIO->lIOCount = 0;
 		pSession->lIO->bIsReleased = FALSE;
@@ -358,11 +358,11 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* pSession)
 {
 	while (1)
 	{
-		if (pSession->SendBuffer.GetUseSize() == 0)
+		if (pSession->SendBuffer.GetUsingCount() == 0)
 			return false;
 		if (InterlockedCompareExchange(&pSession->bIsSend, TRUE, FALSE) == TRUE)
 			return false;
-		if (pSession->SendBuffer.GetUseSize() == 0)
+		if (pSession->SendBuffer.GetUsingCount() == 0)
 		{
 			InterlockedExchange(&pSession->bIsSend, FALSE);
 			continue;
@@ -370,27 +370,22 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* pSession)
 		break;
 	}
 
-	WSABUF wsaBuf[2000];
-
-	int i = 0; 
-	int usingSize = pSession->SendBuffer.GetUseSize();
-	while (usingSize > 0)
+	int iBufCnt;
+	WSABUF wsabuf[2000];
+	CMessage* pPacket;
+	int iPacketCnt = pSession->SendBuffer.GetUsingCount();
+	for (iBufCnt = 0; iBufCnt < iPacketCnt && iBufCnt < 100; ++iBufCnt)
 	{
-		if (usingSize < 8)
+		if (!pSession->SendBuffer.Peek(pPacket, iBufCnt))
 			break;
-		CMessage* packet;
-		pSession->SendBuffer.Get((char*)&packet, 8);
-		wsaBuf[i].buf = packet->GetBufferPtr();
-		wsaBuf[i].len = packet->GetDataSize();
-		pSession->lMessageList.push_back(packet);
-		i++;
-		usingSize -= 8;
+		wsabuf[iBufCnt].buf = pPacket->GetBufferPtr();
+		wsabuf[iBufCnt].len = pPacket->GetDataSize();
 	}
-	pSession->dwPacketCount = i;
+	pSession->dwPacketCount = iBufCnt;
 	DWORD dwTransferred = 0;
 	ZeroMemory(&pSession->SendOverlapped, sizeof(OVERLAPPED));
 	InterlockedIncrement64(&pSession->lIO->lIOCount);
-	if (WSASend(pSession->socket, wsaBuf, i, &dwTransferred, 0, &pSession->SendOverlapped, NULL) == SOCKET_ERROR)
+	if (WSASend(pSession->socket, wsabuf, iBufCnt, &dwTransferred, 0, &pSession->SendOverlapped, NULL) == SOCKET_ERROR)
 	{
 		int error = WSAGetLastError();
 
@@ -398,7 +393,7 @@ bool joshua::NetworkLibrary::PostSend(st_SESSION* pSession)
 		if (error != WSA_IO_PENDING)
 		{
 			if (error != 10038 && error != 10053 && error != 10054 && error != 10058)
-				LOG(L"SYSTEM", LOG_ERROR, L"WSASend() # failed%d / Socket:%d / IOCnt:%d / SendQ Size:%d", error, pSession->socket, pSession->lIO->lIOCount, pSession->SendBuffer.GetUseSize());
+				LOG(L"SYSTEM", LOG_ERROR, L"WSASend() # failed%d / Socket:%d / IOCnt:%d / SendQ Size:%d", error, pSession->socket, pSession->lIO->lIOCount, pSession->SendBuffer.GetUsingCount());
 
 			//DisconnectSession(pSession);
 			if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
@@ -441,7 +436,7 @@ bool joshua::NetworkLibrary::PostRecv(st_SESSION* pSession)
 			// WSAECONNRESET(10054) : 원격 호스트에 의해 기존 연결 강제 해제. 원격 호스트가 갑자기 중지되거나 다시 시작되거나 하드 종료를 사용하는 경우
 			// WSAESHUTDOWN(10058) : 소켓 종료 후 전송
 			if (error != 10038 && error != 10053 && error != 10054 && error != 10058)
-				LOG(L"SYSTEM", LOG_ERROR, L"WSASend() # failed%d / Socket:%d / IOCnt:%d / SendQ Size:%d", error, pSession->socket, pSession->lIO->lIOCount, pSession->SendBuffer.GetUseSize());
+				LOG(L"SYSTEM", LOG_ERROR, L"WSASend() # failed%d / Socket:%d / IOCnt:%d / SendQ Size:%d", error, pSession->socket, pSession->lIO->lIOCount, pSession->SendBuffer.GetUsingCount());
 
 			//DisconnectSession(pSession);
 			if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
@@ -505,29 +500,17 @@ void joshua::NetworkLibrary::SessionRelease(st_SESSION* pSession)
 	OnClientLeave(pSession->SessionID);
 
 	ZeroMemory(&pSession->clientaddr, sizeof(SOCKADDR_IN));
-	if (pSession->SendBuffer.GetUseSize() > 0)
+	CMessage* pPacket = nullptr;
+	while (pSession->SendBuffer.Dequeue(pPacket))
 	{
-		while (pSession->SendBuffer.GetUseSize() > 0)
-		{
-			CMessage* packet;
-			pSession->SendBuffer.Get((char*)&packet, 8);
-			pSession->lMessageList.push_back(packet);
-		}
-		if (pSession->lMessageList.size() != 0)
-		{
-			for (std::list<CMessage*>::iterator itor = pSession->lMessageList.begin(); itor != pSession->lMessageList.end();)
-			{
-				(*itor)->SubRef();
-				itor = pSession->lMessageList.erase(itor);
-			}
-		}
+		if (pPacket != nullptr)
+			pPacket->SubRef();
+		pPacket = nullptr;
 	}
 
 	InterlockedExchange(&pSession->bIsSend, FALSE);
 	pSession->SessionID = -1;
 	pSession->socket = INVALID_SOCKET;
-	//pSession->RecvBuffer.ClearBuffer();
-	//pSession->SendBuffer.ClearBuffer();
 	pSession->dwPacketCount = 0;
 	pSession->lMessageList.clear();
 	PushIndex(pSession->index);
@@ -553,7 +536,7 @@ void joshua::NetworkLibrary::SendPacket(UINT64 id, CMessage* message)
 		return;
 
 	message->AddRef();
-	pSession->SendBuffer.Put((char*)&message, 8);
+	pSession->SendBuffer.Enqueue(message);
 
 	PostSend(pSession);
 
@@ -614,11 +597,13 @@ void joshua::NetworkLibrary::Stop()
 void joshua::NetworkLibrary::PrintPacketCount()
 {
 	wprintf(L"==================== IOCP Echo Server Test ====================\n");
-	wprintf(L" - SessionCount : %ld\n", _dwSessionCount);
+	wprintf(L" - SessionCount : %lld\n", _dwSessionCount);
 	wprintf(L" - Accept Count : %08lld\n", _lAcceptCount);
 	wprintf(L" - Accept TPS : %08lld\n", _lAcceptTPS);
 	wprintf(L" - Send TPS : %08lld\n", _lSendTPS);
 	wprintf(L" - Recv TPS : %08lld\n", _lRecvTPS);
+	wprintf(L" - PacketAlloc : %08d\n", CMessage::GetPacketAllocSize());
+	wprintf(L" - PacketUse : %08d\n", CMessage::GetPacketUsingSize());
 	wprintf(L"===============================================================\n");
 	_lAcceptTPS = _lSendTPS = _lRecvTPS = 0;
 
@@ -764,11 +749,14 @@ void joshua::NetworkLibrary::SendComplete(st_SESSION* pSession, DWORD dwTransfer
 {
 	OnSend(pSession->SessionID, dwTransferred);
 
-	for (std::list<CMessage*>::iterator itor = pSession->lMessageList.begin(); itor != pSession->lMessageList.end();)
+	// 보낸 패킷 수 만큼 지우기
+	CMessage* pPacket;
+	for (int i = 0; i < pSession->dwPacketCount; ++i)
 	{
-		(*itor)->SubRef();
-		itor = pSession->lMessageList.erase(itor);
-		InterlockedIncrement64(&_lSendTPS);
+		if (pSession->SendBuffer.Dequeue(pPacket))
+		{
+			pPacket->SubRef();
+		}
 	}
 	pSession->dwPacketCount = 0;
 

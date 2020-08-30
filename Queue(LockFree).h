@@ -24,7 +24,7 @@ private:
 	st_TOP_NODE* m_pHead;
 	st_TOP_NODE* m_pTail;
 
-	CFreeList<st_NODE>* m_MemoryPool;
+	CLFFreeList<st_NODE>* m_MemoryPool;
 
 	st_NODE* m_pDummyNode;
 	LONG64 m_EnLogCount;
@@ -37,7 +37,7 @@ public:
 	{
 		m_EnLogCount = 0;
 		m_lSize = m_lHeadCount = m_lTailCount= 0;
-		m_MemoryPool = new CFreeList<st_NODE>(0, FALSE);
+		m_MemoryPool = new CLFFreeList<st_NODE>(0, FALSE);
 
 		m_pDummyNode = m_MemoryPool->Alloc();
 		m_pDummyNode->data = 0;
@@ -109,7 +109,7 @@ public:
 		return TRUE;
 	}
 
-	inline BOOL Dequeue(DATA* data)
+	inline BOOL Dequeue(DATA& data)
 	{
 		st_TOP_NODE stCloneHeadNode, stCloneTailNode;
 		st_NODE* nextNode;
@@ -151,7 +151,7 @@ public:
 				// 헤드의 next에 노드가 존재한다면
 				if (nextNode != nullptr)
 				{
-					*data = nextNode->data;
+					data = nextNode->data;
 					if (InterlockedCompareExchange128((LONG64*)m_pHead, newHead, (LONG64)stCloneHeadNode.pTopNode->NextNode, (LONG64*)&stCloneHeadNode))
 					{
 						m_MemoryPool->Free(stCloneHeadNode.pTopNode);
@@ -164,6 +164,28 @@ public:
 			}
 		}
 		return TRUE;
+	}
+
+	inline bool Peek(DATA& outData, int iPeekPos)
+	{
+		if (m_lSize <= 0 || m_lSize < iPeekPos)
+			return false;
+
+		st_NODE* targetNode = m_pHead->pTopNode->NextNode;
+		int iPos = 0;
+		while (true)
+		{
+			if (targetNode == nullptr)
+				return false;
+
+			if (iPos == iPeekPos)
+			{
+				outData = targetNode->data;
+				return true;
+			}
+			targetNode = targetNode->NextNode;
+			++iPos;
+		}
 	}
 
 	inline void Clear()

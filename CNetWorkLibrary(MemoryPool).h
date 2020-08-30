@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "CNewRingBuffer.h"
 #include "Stack(LockFree).h"
+#include "Queue(LockFree).h"
 #include "CMessage.h"
 #include "CLog.h"
 
@@ -38,7 +39,7 @@ namespace joshua
 		UINT64 SessionID;
 		SOCKET socket;
 		SOCKADDR_IN clientaddr;
-		RingBuffer SendBuffer;
+		CQueue<CMessage*> SendBuffer;
 		RingBuffer RecvBuffer;
 		OVERLAPPED SendOverlapped;
 		OVERLAPPED RecvOverlapped;
@@ -58,7 +59,7 @@ namespace joshua
 			socket = INVALID_SOCKET;
 			ZeroMemory(&clientaddr, sizeof(clientaddr));
 			index = 0;
-			SendBuffer.ClearBuffer();
+			SendBuffer.Clear();
 			RecvBuffer.ClearBuffer();
 			lIO = (st_SESSION_FLAG*)_aligned_malloc(sizeof(st_SESSION_FLAG), 16);
 			lIO->bIsReleased = FALSE;

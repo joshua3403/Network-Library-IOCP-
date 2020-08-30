@@ -172,6 +172,15 @@ public:
 
 	void GetData(char* data, int size);
 
+	static int GetPacketUsingSize()
+	{
+		return g_PacketPool->GetUseCount();
+	}
+
+	static int GetPacketAllocSize()
+	{
+		return g_PacketPool->GetAllocCount();
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// 버퍼 Pos 이동. (음수이동은 안됨)
