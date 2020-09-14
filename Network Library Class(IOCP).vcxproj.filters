@@ -74,5 +74,8 @@
     <ClCompile Include="CCrashDump.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="CMemoryPool%28LockFree%29_TLS.h">
+      <Filter>헤더 파일</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

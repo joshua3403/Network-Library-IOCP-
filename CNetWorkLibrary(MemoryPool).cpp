@@ -303,52 +303,58 @@ void joshua::NetworkLibrary::WorkerThread(void)
 
 		retval = GetQueuedCompletionStatus(_hCP, &cbTransferred, reinterpret_cast<PULONG_PTR>(&pSession), &pOverlapped, INFINITE);
 
-		if (pOverlapped == 0)
+		if (retval == true)
 		{
-			// 2번.
-			if (retval == FALSE)
+			if (cbTransferred == 0 && pSession == 0 && pOverlapped == 0)
+			{
+				PostQueuedCompletionStatus(_hCP, 0, 0, 0);	// GQCS 에러 시 조치를 취할만한게 없으므로 종료
+				break;
+			}
+
+			if (cbTransferred == 0)
+			{
+				if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+				{
+					SessionRelease(pSession);
+				}
+				continue;
+			}
+
+			else
+			{
+				if (pOverlapped == &pSession->RecvOverlapped)
+				{
+					RecvComplete(pSession, cbTransferred);
+				}
+				if (pOverlapped == &pSession->SendOverlapped)
+				{
+					SendComplete(pSession, cbTransferred);
+				}
+
+
+				if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+				{
+					SessionRelease(pSession);
+				}
+			}
+		}
+		else
+		{
+			if (cbTransferred == 0)
+			{
+				if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
+				{
+					SessionRelease(pSession);
+				}
+				continue;
+				//DisconnectSession(pSession);
+			}
+			else
 			{
 				LOG(L"SYSTEM", LOG_ERROR, L"GetQueuedCompletionStatus() failed %d", GetLastError());
 				PostQueuedCompletionStatus(_hCP, 0, 0, 0);	// GQCS 에러 시 조치를 취할만한게 없으므로 종료
 				break;
 			}
-
-			// 정상종료
-			if (pSession == 0 && cbTransferred == 0)
-			{
-				PostQueuedCompletionStatus(_hCP, 0, 0, 0);	// GQCS 에러 시 조치를 취할만한게 없으므로 종료
-				break;
-			}
-		}
-
-		if (cbTransferred == 0)
-		{
-			if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
-			{
-				SessionRelease(pSession);
-			}
-			continue;
-			//DisconnectSession(pSession);
-		}
-		else
-		{
-			if (pOverlapped == &pSession->RecvOverlapped)
-			{
-				RecvComplete(pSession, cbTransferred);
-				//wprintf(L"Recv Session IO Count : %d, len : %d\n", pSession->dwIOCount, cbTransferred);
-			}
-			if (pOverlapped == &pSession->SendOverlapped)
-			{
-				SendComplete(pSession, cbTransferred);
-				//wprintf(L"Send Session IO Count : %d, len : %d\n", pSession->dwIOCount, cbTransferred);
-			}
-		}
-
-		//wprintf(L"Final Session IO Count : %d\n", pSession->dwIOCount);
-
-		if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
-		{
-			SessionRelease(pSession);
 		}
 	}
 	return;
@@ -539,6 +545,8 @@ void joshua::NetworkLibrary::SendPacket(UINT64 id, CMessage* message)
 	pSession->SendBuffer.Enqueue(message);
 
 	PostSend(pSession);
+
+	InterlockedIncrement64(&_lSendTPS);
 
 	if (InterlockedDecrement64(&pSession->lIO->lIOCount) == 0)
 		SessionRelease(pSession);

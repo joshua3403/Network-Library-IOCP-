@@ -170,6 +170,7 @@
   <ItemGroup>
     <ClCompile Include="CCrashDump.cpp" />
     <ClCompile Include="CExceptClass.cpp" />
+    <ClCompile Include="CMemoryPool%28LockFree%29_TLS.h" />
     <ClCompile Include="CMessage.cpp" />
     <ClCompile Include="CNetWorkLibrary(MemoryPool).cpp" />
     <ClCompile Include="CNetworkTest.cpp" />
