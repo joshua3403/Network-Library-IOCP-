@@ -126,7 +126,6 @@ inline CLFFreeList<DATA>::CLFFreeList(int iBlockNum, bool bPlacementNew)
 
 	if (m_lMaxCount != 0)
 	{
-
 		while (count > 0)
 		{
 			void* newBlock = malloc(sizeof(st_BLOCK_NODE) + sizeof(DATA));

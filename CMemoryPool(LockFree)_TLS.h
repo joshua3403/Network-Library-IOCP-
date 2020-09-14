@@ -19,24 +19,27 @@ private:
 	};
 
 public:
-	CLFFreeList_TLS(LONG lDumpCount = 200);
+	CLFFreeList_TLS(LONG lDumpCount = 200, BOOL bPlacementNew = false);
 	virtual ~CLFFreeList_TLS();
 	DATA* Alloc();
 	bool Free(DATA* data);
 
+	int GetUseCount() { return m_dwUseCount; }
+	int GetAllocCount() { return m_pDataDump->GetAllocCount(); }
+
 private:
 	CDataDump* DataDumpAlloc()
 	{
-		CDataDump* DataDump = (CDataDump*)TlsGetValue(m_dwTlsIndex);
+		CDataDump* DataDump = m_pDataDump->Alloc();
 
 		if (DataDump->m_pDataDumpNode == nullptr)
 		{
 			DataDump->Initial(this, m_dwDumpCount);
 		}
 		else
-			DataDump->Clear();
+			DataDump->Clear(m_dwDumpCount);
 
-		InterlockedDecrement(&m_dwUseCount);
+		TlsSetValue(m_dwTlsIndex, DataDump);
 
 		return DataDump;
 	}
@@ -60,7 +63,7 @@ private:
 		virtual ~CDataDump() { delete[] m_pDataDumpNode; };
 		void Initial(CLFFreeList_TLS<DATA>* MemoryPool, DWORD DataCount);
 		DATA* Alloc();
-		bool Clear();
+		bool Clear(DWORD size);
 		bool Free();
 	private:
 		friend class CLFFreeList_TLS<DATA>;
@@ -81,8 +84,8 @@ inline CLFFreeList_TLS<DATA>::CDataDump::CDataDump()
 {
 	m_pFreeList = nullptr;
 	m_pDataDumpNode = nullptr;
-	m_dwDumpCount = 0;
-	m_dwUseCount = 0;
+	m_dwNodeCount = 0;
+	m_dwUsingCount = 0;
 	m_dwFreeCount = 0;
 }
 
@@ -104,18 +107,17 @@ inline void CLFFreeList_TLS<DATA>::CDataDump::Initial(CLFFreeList_TLS<DATA>* Mem
 template<class DATA>
 inline DATA* CLFFreeList_TLS<DATA>::CDataDump::Alloc()
 {
-	DATA* allocData = &m_pDataDumpNode[m_dwUseCount].Data;
-	if (m_dwNodeCount == InterlockedIncrement(&m_dwUseCount))
-		// TODO
+	DATA* allocData = &m_pDataDumpNode[m_dwUsingCount].Data;
+	if (m_dwNodeCount == InterlockedIncrement(&m_dwUsingCount))
 		m_pFreeList->DataDumpAlloc();
 	return allocData;
 }
 
 template<class DATA>
-inline bool CLFFreeList_TLS<DATA>::CDataDump::Clear()
+inline bool CLFFreeList_TLS<DATA>::CDataDump::Clear(DWORD size)
 {
-	m_dwFreeCount = m_dwDumpCount;
-	m_dwUseCount = 0;
+	m_dwFreeCount = size;
+	m_dwUsingCount = 0;
 	return true;
 }
 
@@ -132,11 +134,13 @@ inline bool CLFFreeList_TLS<DATA>::CDataDump::Free()
 }
 
 template<class DATA>
-inline CLFFreeList_TLS<DATA>::CLFFreeList_TLS(LONG lDumpCount)
+inline CLFFreeList_TLS<DATA>::CLFFreeList_TLS(LONG lDumpCount, BOOL bPlacementNew)
 {
 	m_dwTlsIndex = TlsAlloc();
 	if (m_dwTlsIndex == TLS_OUT_OF_INDEXES)
 		CRASH();
+
+	m_pDataDump = new CLFFreeList<CDataDump>(lDumpCount, bPlacementNew);
 	m_dwDumpCount = lDumpCount;
 	m_dwUseCount = 0;
 }
@@ -154,19 +158,18 @@ inline DATA* CLFFreeList_TLS<DATA>::Alloc()
 	CDataDump* DataDump = (CDataDump*)TlsGetValue(m_dwTlsIndex);
 	if (DataDump == nullptr)
 	{
-		DataDump = m_pDataDump->Alloc();
+		DataDump = DataDumpAlloc();
 	}
 	InterlockedIncrement(&m_dwUseCount);
 
 	return DataDump->Alloc();	
-	return NULL;
 }
 
 template<class DATA>
 inline bool CLFFreeList_TLS<DATA>::Free(DATA* data)
 {
 	st_DataDump_Node* DataDump = (st_DataDump_Node*)((char*)data - (sizeof(st_DataDump_Node::pDataDump) + sizeof(st_DataDump_Node::lCheck)));
-	if (DataDump->iCheck != CHECKCODE)
+	if (DataDump->lCheck != CHECKCODE)
 		CRASH();
 
 	InterlockedDecrement(&m_dwUseCount);

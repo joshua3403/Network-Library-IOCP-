@@ -610,7 +610,7 @@ void joshua::NetworkLibrary::PrintPacketCount()
 	wprintf(L" - Accept TPS : %08lld\n", _lAcceptTPS);
 	wprintf(L" - Send TPS : %08lld\n", _lSendTPS);
 	wprintf(L" - Recv TPS : %08lld\n", _lRecvTPS);
-	wprintf(L" - PacketAlloc : %08d\n", CMessage::GetPacketAllocSize());
+	//wprintf(L" - PacketAlloc : %08d\n", CMessage::GetPacketAllocSize());
 	wprintf(L" - PacketUse : %08d\n", CMessage::GetPacketUsingSize());
 	wprintf(L"===============================================================\n");
 	_lAcceptTPS = _lSendTPS = _lRecvTPS = 0;

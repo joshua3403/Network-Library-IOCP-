@@ -1,7 +1,7 @@
 #pragma once
 #include "stdafx.h"
 #include "CExceptClass.h"
-#include "MemoryPool(LockFree).h"
+#include "CMemoryPool(LockFree)_TLS.h"
 class CMessage
 {
 	/*---------------------------------------------------------------
@@ -25,10 +25,10 @@ private:
 	int m_iUsingSize;
 	char* m_cpBuffer;
 	LONG m_lRefCount;
-	friend class CLFFreeList<CMessage>;
+	friend class CLFFreeList_TLS<CMessage>;
 	CRITICAL_SECTION m_CS;
 
-private:
+public:
 	//////////////////////////////////////////////////////////////////////////
 	// 생성자, 파괴자.
 	//
@@ -69,7 +69,7 @@ private:
 	}
 
 public:
-	static CLFFreeList<CMessage>* g_PacketPool;
+	static CLFFreeList_TLS<CMessage> g_PacketPool;
 
 public:
 
@@ -82,28 +82,13 @@ public:
 	{
 		if (InterlockedDecrement(&m_lRefCount) == 0)
 		{
-			g_PacketPool->Free(this);
+			g_PacketPool.Free(this);
 		}
-	}
-
-
-	static void SetMemoryPool(DWORD count, BOOL bPlacementNew)
-	{
-		if (g_PacketPool == nullptr)
-		{
-			g_PacketPool = new CLFFreeList<CMessage>(count, bPlacementNew);
-			atexit(Destroy);
-		}
-	}
-
-	static void Destroy()
-	{
-		delete g_PacketPool;
 	}
 
 	static CMessage* Alloc()
 	{
-		CMessage* newMessage = g_PacketPool->Alloc();
+		CMessage* newMessage = g_PacketPool.Alloc();
 		newMessage->Clear();
 		InterlockedIncrement(&newMessage->m_lRefCount);
 		return newMessage;
@@ -174,13 +159,13 @@ public:
 
 	static int GetPacketUsingSize()
 	{
-		return g_PacketPool->GetUseCount();
+		return g_PacketPool.GetUseCount();
 	}
 
-	static int GetPacketAllocSize()
-	{
-		return g_PacketPool->GetAllocCount();
-	}
+	//static int GetPacketAllocSize()
+	//{
+	//	return g_PacketPool.GetAllocCount();
+	//}
 
 	//////////////////////////////////////////////////////////////////////////
 	// 버퍼 Pos 이동. (음수이동은 안됨)
