@@ -37,18 +37,7 @@ BOOL joshua::NetworkLibrary::InitialNetwork(const WCHAR* ip, DWORD port, BOOL Na
 		return fail;
 	}
 
-	// 소켓 Send버퍼의 크기를 0으로 만들자
-	//int optval;
 
-	//int optlen = sizeof(optval);
-
-	//getsockopt(_slisten_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
-
-	//optval = 0;
-
-	//setsockopt(_slisten_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
-
-	//getsockopt(_slisten_socket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
 	//wprintf(L"sendbuf size : %d\n", optval);
 
 	setsockopt(_slisten_socket, IPPROTO_TCP, TCP_NODELAY, (char*)&Nagle, sizeof(Nagle));
@@ -198,6 +187,19 @@ void joshua::NetworkLibrary::AcceptThread(void)
 		int addrlen = sizeof(clientaddr);
 
 		clientsocket = accept(_slisten_socket, reinterpret_cast<sockaddr*>(&clientaddr), &addrlen);
+
+		//소켓 Send버퍼의 크기를 0으로 만들자
+		int optval;
+
+		int optlen = sizeof(optval);
+
+		getsockopt(clientsocket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
+
+		optval = 0;
+
+		setsockopt(clientsocket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
+
+		getsockopt(clientsocket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
 
 		_lAcceptCount++;
 		_lAcceptTPS++;

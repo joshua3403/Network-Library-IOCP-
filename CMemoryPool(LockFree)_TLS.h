@@ -4,6 +4,7 @@
 #include "CLog.h"
 #include "MemoryPool(LockFree).h"
 
+#define MAXDUMPCOUNT 500
 #define CHECKCODE 0x0000000019921107
 
 template<class DATA>
@@ -19,7 +20,7 @@ private:
 	};
 
 public:
-	CLFFreeList_TLS(LONG lDumpCount = 200, BOOL bPlacementNew = false);
+	CLFFreeList_TLS(BOOL bPlacementNew = false);
 	virtual ~CLFFreeList_TLS();
 	DATA* Alloc();
 	bool Free(DATA* data);
@@ -32,12 +33,12 @@ private:
 	{
 		CDataDump* DataDump = m_pDataDump->Alloc();
 
-		if (DataDump->m_pDataDumpNode == nullptr)
+		if (DataDump->m_pFreeList == nullptr)
 		{
-			DataDump->Initial(this, m_dwDumpCount);
+			DataDump->Initial(this);
 		}
 		else
-			DataDump->Clear(m_dwDumpCount);
+			DataDump->Clear();
 
 		TlsSetValue(m_dwTlsIndex, DataDump);
 
@@ -46,8 +47,6 @@ private:
 
 private:
 	DWORD m_dwTlsIndex;
-
-	DWORD m_dwDumpCount;
 
 	DWORD m_dwUseCount;
 
@@ -61,14 +60,14 @@ private:
 	public:
 		CDataDump();
 		virtual ~CDataDump() { delete[] m_pDataDumpNode; };
-		void Initial(CLFFreeList_TLS<DATA>* MemoryPool, DWORD DataCount);
+		void Initial(CLFFreeList_TLS<DATA>* MemoryPool);
 		DATA* Alloc();
-		bool Clear(DWORD size);
+		bool Clear();
 		bool Free();
 	private:
 		friend class CLFFreeList_TLS<DATA>;
 		CLFFreeList_TLS<DATA>* m_pFreeList;
-		st_DataDump_Node* m_pDataDumpNode;
+		st_DataDump_Node m_pDataDumpNode[MAXDUMPCOUNT];
 		// 노드 덤프 내의 Data 개수
 		DWORD m_dwNodeCount;
 		// 총 데이터의 개수 중에서 할당된 개수
@@ -83,20 +82,18 @@ template<class DATA>
 inline CLFFreeList_TLS<DATA>::CDataDump::CDataDump()
 {
 	m_pFreeList = nullptr;
-	m_pDataDumpNode = nullptr;
-	m_dwNodeCount = 0;
+	m_dwNodeCount = MAXDUMPCOUNT;
 	m_dwUsingCount = 0;
-	m_dwFreeCount = 0;
+	m_dwFreeCount = MAXDUMPCOUNT;
 }
 
 template<class DATA>
-inline void CLFFreeList_TLS<DATA>::CDataDump::Initial(CLFFreeList_TLS<DATA>* MemoryPool, DWORD DataCount)
+inline void CLFFreeList_TLS<DATA>::CDataDump::Initial(CLFFreeList_TLS<DATA>* MemoryPool)
 {
 	m_pFreeList = MemoryPool;
-	m_dwNodeCount = DataCount;
-	m_dwFreeCount = DataCount;
-
-	m_pDataDumpNode = new st_DataDump_Node[m_dwNodeCount];
+	m_dwFreeCount = MAXDUMPCOUNT;
+	m_dwNodeCount = m_dwNodeCount;
+	m_dwUsingCount = 0;
 	for (int i = 0; i < m_dwNodeCount; i++)
 	{
 		m_pDataDumpNode[i].pDataDump = this;
@@ -107,16 +104,16 @@ inline void CLFFreeList_TLS<DATA>::CDataDump::Initial(CLFFreeList_TLS<DATA>* Mem
 template<class DATA>
 inline DATA* CLFFreeList_TLS<DATA>::CDataDump::Alloc()
 {
-	DATA* allocData = &m_pDataDumpNode[m_dwUsingCount].Data;
-	if (m_dwNodeCount == InterlockedIncrement(&m_dwUsingCount))
+	DATA* allocData = &m_pDataDumpNode[m_dwUsingCount++].Data;
+	if (MAXDUMPCOUNT ==  m_dwUsingCount)
 		m_pFreeList->DataDumpAlloc();
 	return allocData;
 }
 
 template<class DATA>
-inline bool CLFFreeList_TLS<DATA>::CDataDump::Clear(DWORD size)
+inline bool CLFFreeList_TLS<DATA>::CDataDump::Clear()
 {
-	m_dwFreeCount = size;
+	m_dwFreeCount = MAXDUMPCOUNT;
 	m_dwUsingCount = 0;
 	return true;
 }
@@ -126,7 +123,7 @@ inline bool CLFFreeList_TLS<DATA>::CDataDump::Free()
 {
 	if (InterlockedDecrement(&m_dwFreeCount) == 0)
 	{
-		m_pFreeList->m_pDataDump->Free(m_pDataDumpNode->pDataDump);
+		m_pFreeList->m_pDataDump->Free(m_pDataDumpNode[0].pDataDump);
 
 		return true;
 	}
@@ -134,14 +131,13 @@ inline bool CLFFreeList_TLS<DATA>::CDataDump::Free()
 }
 
 template<class DATA>
-inline CLFFreeList_TLS<DATA>::CLFFreeList_TLS(LONG lDumpCount, BOOL bPlacementNew)
+inline CLFFreeList_TLS<DATA>::CLFFreeList_TLS(BOOL bPlacementNew)
 {
 	m_dwTlsIndex = TlsAlloc();
 	if (m_dwTlsIndex == TLS_OUT_OF_INDEXES)
 		CRASH();
 
-	m_pDataDump = new CLFFreeList<CDataDump>(lDumpCount, bPlacementNew);
-	m_dwDumpCount = lDumpCount;
+	m_pDataDump = new CLFFreeList<CDataDump>();
 	m_dwUseCount = 0;
 }
 

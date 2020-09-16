@@ -53,7 +53,7 @@ public:
 	//				(bool) Alloc 시 생성자 / Free 시 파괴자 호출 여부
 	// Return:
 	//////////////////////////////////////////////////////////////////////////
-	CLFFreeList(int iBlockNum, bool bPlacementNew = false);
+	CLFFreeList(int iBlockNum = 0, bool bPlacementNew = false);
 	virtual	~CLFFreeList();
 
 
@@ -137,7 +137,7 @@ inline CLFFreeList<DATA>::CLFFreeList(int iBlockNum, bool bPlacementNew)
 				newObject = new((char*)newBlock + sizeof(st_BLOCK_NODE)) DATA;
 			}
 			count--;
-			wprintf(L"CFreeList() : MemoryPool Header Pointer : %p, newNode Pointer : %p newObject Pointer : %p\n", _pTop->pTopNode, newNode, newObject);
+			//wprintf(L"CFreeList() : MemoryPool Header Pointer : %p, newNode Pointer : %p newObject Pointer : %p\n", _pTop->pTopNode, newNode, newObject);
 
 		}
 	}
@@ -156,6 +156,7 @@ inline CLFFreeList<DATA>::~CLFFreeList()
 			_pTop->pTopNode = _pTop->pTopNode->stpNextBlock;
 			free(temp);
 		}
+
 	}
 
 	_aligned_free(_pTop);
