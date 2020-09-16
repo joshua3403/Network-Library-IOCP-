@@ -151,8 +151,11 @@ inline CLFFreeList<DATA>::~CLFFreeList()
 	for (int i = 0; i < m_lMaxCount; i++)
 	{
 		temp = _pTop->pTopNode;
-		_pTop->pTopNode = _pTop->pTopNode->stpNextBlock;
-		free(temp);
+		if (temp != nullptr)
+		{
+			_pTop->pTopNode = _pTop->pTopNode->stpNextBlock;
+			free(temp);
+		}
 	}
 
 	_aligned_free(_pTop);
