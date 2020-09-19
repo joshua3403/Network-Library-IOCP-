@@ -437,7 +437,6 @@ bool joshua::NetworkLibrary::PostRecv(st_SESSION* pSession)
 	{
 		int error = WSAGetLastError();
 
-		// WSASend가 pending이 걸릴 경우는 현재 send 임시 버퍼가 가득찬 상태
 		if (error != WSA_IO_PENDING)
 		{			// WSAENOTSOCK(10038) : 소켓이 아닌 항목에 소켓 작업 시도
 			// WSAECONNABORTED(10053) : 호스트가 연결 중지. 데이터 전송 시간 초과, 프로토콜 오류 발생
@@ -461,7 +460,6 @@ bool joshua::NetworkLibrary::PostRecv(st_SESSION* pSession)
 
 BOOL joshua::NetworkLibrary::Start(DWORD port, BOOL nagle, const WCHAR* ip, DWORD threadCount, __int64 MaxClient)
 {
-	SYSLOGCLASS* _pLog = SYSLOGCLASS::GetInstance();
 	// 소켓 초기화
 	_dwSessionMax = MaxClient;
 	_bServerOn = TRUE;
