@@ -42,8 +42,8 @@ void CMessage::GetData(char* data, int size)
 
 void CMessage::SetLanMessageHeader(char* header, int len)
 {
-	char* header = m_cpHeadPtr + (eBUFFER_HEADER_SIZE - len);
-	memcpy(m_cpHeadPtr + 3, &header, len);
+	char* cheader = m_cpHeadPtr + (eBUFFER_HEADER_SIZE - len);
+	memcpy(cheader, &header, len);
 }
 
 void CMessage::SetEncodingCode()
