@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "CMessage.h"
 
-CLFFreeList_TLS<CMessage> CMessage::g_PacketPool;
+CLFFreeList_TLS<CMessage> CMessage::g_PacketPool(false);
 
 void CMessage::PutData(char* data, int size)
 {
@@ -16,7 +16,7 @@ void CMessage::PutData(char* data, int size)
 	}
 
 	realSize = size;
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iRear;
 	memcpy(ptr, (char*)data, realSize);
 	m_iUsingSize += realSize;
@@ -28,55 +28,16 @@ void CMessage::GetData(char* data, int size)
 	int realSize = GetDataSize() - size;
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> SHORT ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> SHORT ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = size;
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 	memcpy(data, ptr, size);
 	m_iUsingSize -= realSize;
 	m_iFront += realSize;
-}
-
-void CMessage::SetLanMessageHeader(char* header, int len)
-{
-	char* cheader = m_cpHeadPtr + (eBUFFER_HEADER_SIZE - len);
-	memcpy(cheader, &header, len);
-}
-
-void CMessage::SetEncodingCode()
-{
-		if (m_bIsEncoded)
-			return;
-
-		char* payLoadPtr = GetBufferPtr();
-		char* headerPtr = GetWanHeaderPtr();
-		char* checkSumPtr = headerPtr + 4;
-		char randKey = m_bRandKey;
-		char key = FIXKEY;
-		short len = GetDataSize();
-
-		unsigned char checkSum = 0;
-		for (int i = 0; i < len; i++)
-		{
-			checkSum += payLoadPtr[i];
-		}
-		checkSum = checkSum % 256;
-
-		*checkSumPtr = checkSum;
-		char test = 0;
-		char test1 = 0;
-		for (int i = 0; i < len; i++)
-		{
-			test = payLoadPtr[i] ^ (test + randKey + i + 1);
-			payLoadPtr[i] = test ^ (test1 + key + i + 1);
-			test1 = payLoadPtr[i];
-		}
-
-		*(headerPtr + 2) = len;
-		*(headerPtr + 3) = randKey;
 }
 
 void CMessage::IncreaseBufferSize(int size)
@@ -85,11 +46,11 @@ void CMessage::IncreaseBufferSize(int size)
 	char newBuffer[1000] = { 0 };
 	while (realSize < 0)
 	{
-		memcpy(newBuffer, m_cpPayloadBuffer, m_iMaxSize);
+		memcpy(newBuffer, m_cpBuffer, m_iMaxSize);
 		m_iMaxSize += size;
-		free(m_cpPayloadBuffer);
-		m_cpPayloadBuffer = (char*)malloc(sizeof(char) * (m_iMaxSize));
-		memcpy(m_cpPayloadBuffer, newBuffer, m_iMaxSize);
+		free(m_cpBuffer);
+		m_cpBuffer = (char*)malloc(sizeof(char) * (m_iMaxSize));
+		memcpy(m_cpBuffer, newBuffer, m_iMaxSize);
 		realSize = GetFreeSize() - size;
 	}
 }
@@ -100,9 +61,9 @@ CMessage& CMessage::operator=(CMessage& clSrCMessage)
 	if (this == &clSrCMessage)
 		return *this;
 
-	free(m_cpPayloadBuffer);
-	m_cpPayloadBuffer = (char*)malloc(((clSrCMessage).GetBufferSize()));
-	memcpy(m_cpPayloadBuffer, (clSrCMessage).GetBufferPtr(), sizeof(m_cpPayloadBuffer));
+	free(m_cpBuffer);
+	m_cpBuffer = (char*)malloc(((clSrCMessage).GetBufferSize()));
+	memcpy(m_cpBuffer, (clSrCMessage).GetBufferPtr(), sizeof(m_cpBuffer));
 	m_iFront = (clSrCMessage).GetFront();
 	m_iRear = (clSrCMessage).GetRear();
 	m_iMaxSize = (clSrCMessage).GetBufferSize();
@@ -120,7 +81,7 @@ CMessage& CMessage::operator<<(BYTE byValue)
 		IncreaseBufferSize(eBUFFER_UPSCALE_BYTE);
 		realSize = sizeof(byValue);
 
-		char* ptr = m_cpPayloadBuffer;
+		char* ptr = m_cpBuffer;
 		ptr += m_iRear;
 		memcpy(ptr, (char*)&byValue, realSize);
 		m_iUsingSize += realSize;
@@ -133,7 +94,7 @@ CMessage& CMessage::operator<<(BYTE byValue)
 
 	realSize = sizeof(byValue);
 
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iRear;
 	memcpy(ptr, (char*)&byValue, realSize);
 	m_iUsingSize += realSize;
@@ -151,7 +112,7 @@ CMessage& CMessage::operator<<(char chValue)
 		IncreaseBufferSize(eBUFFER_UPSCALE_BYTE);
 		realSize = sizeof(chValue);
 
-		char* ptr = m_cpPayloadBuffer;
+		char* ptr = m_cpBuffer;
 		ptr += m_iRear;
 		memcpy(ptr, (char*)&chValue, realSize);
 		m_iUsingSize += realSize;
@@ -164,7 +125,7 @@ CMessage& CMessage::operator<<(char chValue)
 
 	realSize = sizeof(chValue);
 
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iRear;
 	memcpy(ptr, (char*)&chValue, realSize);
 	m_iUsingSize += realSize;
@@ -182,7 +143,7 @@ CMessage& CMessage::operator<<(short shValue)
 		IncreaseBufferSize(eBUFFER_UPSCALE_SHORT);
 		realSize = sizeof(shValue);
 
-		char* ptr = m_cpPayloadBuffer;
+		char* ptr = m_cpBuffer;
 		ptr += m_iRear;
 		memcpy(ptr, (char*)&shValue, realSize);
 		m_iUsingSize += realSize;
@@ -195,7 +156,7 @@ CMessage& CMessage::operator<<(short shValue)
 
 	realSize = sizeof(shValue);
 
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iRear;
 	memcpy(ptr, (char*)&shValue, realSize);
 	m_iUsingSize += realSize;
@@ -213,7 +174,7 @@ CMessage& CMessage::operator<<(WORD wValue)
 		IncreaseBufferSize(eBUFFER_UPSCALE_SHORT);
 		realSize = sizeof(wValue);
 
-		char* ptr = m_cpPayloadBuffer;
+		char* ptr = m_cpBuffer;
 		ptr += m_iRear;
 		memcpy(ptr, (char*)&wValue, realSize);
 		m_iUsingSize += realSize;
@@ -226,7 +187,7 @@ CMessage& CMessage::operator<<(WORD wValue)
 
 	realSize = sizeof(wValue);
 
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iRear;
 	memcpy(ptr, (char*)&wValue, realSize);
 	m_iUsingSize += realSize;
@@ -244,7 +205,7 @@ CMessage& CMessage::operator<<(int iValue)
 		IncreaseBufferSize(eBUFFER_UPSCALE_INT);
 		realSize = sizeof(iValue);
 
-		char* ptr = m_cpPayloadBuffer;
+		char* ptr = m_cpBuffer;
 		ptr += m_iRear;
 		memcpy(ptr, (char*)&iValue, realSize);
 		m_iUsingSize += realSize;
@@ -257,7 +218,7 @@ CMessage& CMessage::operator<<(int iValue)
 
 	realSize = sizeof(iValue);
 
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iRear;
 	memcpy(ptr, (char*)&iValue, realSize);
 	m_iUsingSize += realSize;
@@ -275,7 +236,7 @@ CMessage& CMessage::operator<<(DWORD dwValue)
 		IncreaseBufferSize(eBUFFER_UPSCALE_INT);
 		realSize = sizeof(dwValue);
 
-		char* ptr = m_cpPayloadBuffer;
+		char* ptr = m_cpBuffer;
 		ptr += m_iRear;
 		memcpy(ptr, (char*)&dwValue, realSize);
 		m_iUsingSize += realSize;
@@ -289,7 +250,7 @@ CMessage& CMessage::operator<<(DWORD dwValue)
 
 	realSize = sizeof(dwValue);
 
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iRear;
 	memcpy(ptr, (char*)&dwValue, realSize);
 	m_iUsingSize += realSize;
@@ -307,7 +268,7 @@ CMessage& CMessage::operator<<(float fValue)
 		IncreaseBufferSize(eBUFFER_UPSCALE_INT);
 		realSize = sizeof(fValue);
 
-		char* ptr = m_cpPayloadBuffer;
+		char* ptr = m_cpBuffer;
 		ptr += m_iRear;
 		memcpy(ptr, (char*)&fValue, realSize);
 		m_iUsingSize += realSize;
@@ -321,7 +282,7 @@ CMessage& CMessage::operator<<(float fValue)
 
 	realSize = sizeof(fValue);
 
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iRear;
 	memcpy(ptr, (char*)&fValue, realSize);
 	m_iUsingSize += realSize;
@@ -339,7 +300,7 @@ CMessage& CMessage::operator<<(__int64 iValue)
 		IncreaseBufferSize(eBUFFER_UPSCALE_INT64);
 		realSize = sizeof(iValue);
 
-		char* ptr = m_cpPayloadBuffer;
+		char* ptr = m_cpBuffer;
 		ptr += m_iRear;
 		memcpy(ptr, (char*)&iValue, realSize);
 		m_iUsingSize += realSize;
@@ -353,7 +314,7 @@ CMessage& CMessage::operator<<(__int64 iValue)
 
 	realSize = sizeof(iValue);
 
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iRear;
 	memcpy(ptr, (char*)&iValue, realSize);
 	m_iUsingSize += realSize;
@@ -371,20 +332,20 @@ CMessage& CMessage::operator<<(double dValue)
 		IncreaseBufferSize(eBUFFER_UPSCALE_INT64);
 		realSize = sizeof(dValue);
 
-		char* ptr = m_cpPayloadBuffer;
+		char* ptr = m_cpBuffer;
 		ptr += m_iRear;
 		memcpy(ptr, (char*)&dValue, realSize);
 		m_iUsingSize += realSize;
 		m_iRear += realSize;
 
 		// TODO: 여기에 메모리를 다시 늘리고 예외 객체 throw
-		CExceptClass* Except = new CExceptClass(L"<< DOUBLE ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L"<< DOUBLE ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(double);
 
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iRear;
 	memcpy(ptr, (char*)&dValue, realSize);
 	m_iUsingSize += realSize;
@@ -398,12 +359,12 @@ CMessage& CMessage::operator>>(BYTE& byValue)
 	int realSize = GetDataSize() - sizeof(byValue);
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> BYTE ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> BYTE ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(BYTE);
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 
 	memcpy(&byValue, ptr, realSize);
@@ -418,12 +379,12 @@ CMessage& CMessage::operator>>(char& chValue)
 	int realSize = GetDataSize() - sizeof(chValue);
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> CHAR ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> CHAR ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(char);
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 
 	memcpy(&chValue, ptr, realSize);
@@ -438,12 +399,12 @@ CMessage& CMessage::operator>>(short& shValue)
 	int realSize = GetDataSize() - sizeof(shValue);
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> SHORT ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> SHORT ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(short);
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 
 	memcpy(&shValue, ptr, realSize);
@@ -458,12 +419,12 @@ CMessage& CMessage::operator>>(WORD& wValue)
 	int realSize = GetDataSize() - sizeof(wValue);
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> WORD ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> WORD ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(WORD);
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 
 	memcpy(&wValue, ptr, realSize);
@@ -480,12 +441,12 @@ CMessage& CMessage::operator>>(int& iValue)
 	int realSize = GetDataSize() - sizeof(iValue);
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> INT ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> INT ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(int);
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 
 	memcpy(&iValue, ptr, realSize);
@@ -500,12 +461,12 @@ CMessage& CMessage::operator>>(DWORD& dwValue)
 	int realSize = GetDataSize() - sizeof(dwValue);
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> DWORD ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> DWORD ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(DWORD);
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 
 	memcpy(&dwValue, ptr, realSize);
@@ -520,12 +481,12 @@ CMessage& CMessage::operator>>(float& fValue)
 	int realSize = GetDataSize() - sizeof(fValue);
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> FLOAT ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> FLOAT ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(float);
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 
 	memcpy(&fValue, ptr, realSize);
@@ -540,12 +501,12 @@ CMessage& CMessage::operator>>(__int64& iValue)
 	int realSize = GetDataSize() - sizeof(iValue);
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> INT64 ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> INT64 ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(__int64);
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 
 	memcpy(&iValue, ptr, realSize);
@@ -560,12 +521,12 @@ CMessage& CMessage::operator>>(double& dValue)
 	int realSize = GetDataSize() - sizeof(dValue);
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> DOUBLE ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> DOUBLE ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(double);
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 
 	memcpy(&dValue, ptr, realSize);
@@ -580,12 +541,12 @@ CMessage& CMessage::operator>>(UINT64& dValue)
 	int realSize = GetDataSize() - sizeof(dValue);
 	if (realSize < 0)
 	{
-		CExceptClass* Except = new CExceptClass(L">> DOUBLE ERROR", m_cpPayloadBuffer, m_iMaxSize);
+		CExceptClass* Except = new CExceptClass(L">> DOUBLE ERROR", m_cpBuffer, m_iMaxSize);
 		throw Except;
 	}
 
 	realSize = sizeof(dValue);
-	char* ptr = m_cpPayloadBuffer;
+	char* ptr = m_cpBuffer;
 	ptr += m_iFront;
 
 	memcpy(&dValue, ptr, realSize);
