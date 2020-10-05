@@ -2,6 +2,9 @@
 #include "stdafx.h"
 #include "CExceptClass.h"
 #include "CMemoryPool(LockFree)_TLS.h"
+
+#define FIXKEY 0x10
+
 class CMessage
 {
 	/*---------------------------------------------------------------
@@ -14,26 +17,24 @@ class CMessage
 		eBUFFER_UPSCALE_BYTE = 1,
 		eBUFFER_UPSCALE_SHORT = 2,
 		eBUFFER_UPSCALE_INT = 4,
-		eBUFFER_UPSCALE_INT64 = 8
-
+		eBUFFER_UPSCALE_INT64 = 8,
+		eBUFFER_HEADER_SIZE = 5
 	};
 
 private:
-	char* m_cpBuffer;
-	LONG m_lRefCount;
+	int m_iMaxSize;
 	int m_iFront;
 	int m_iRear;
 	int m_iUsingSize;
-<<<<<<< HEAD
-	char* m_cpBuffer;
+	char* m_cpPayloadBuffer;
+	char* m_cpHeadPtr;
 	LONG m_lRefCount;
 	friend class CLFFreeList_TLS<CMessage>;
 	CRITICAL_SECTION m_CS;
-=======
-	int m_iMaxSize;
 
-	friend class CLFFreeList_TLS<CMessage>;
->>>>>>> b5c921273379b789f4f3bcbf35584704d6b7a6a6
+	BYTE m_bRandKey;
+
+	BOOL m_bIsEncoded;
 
 public:
 	//////////////////////////////////////////////////////////////////////////
@@ -45,18 +46,17 @@ public:
 	{
 		m_iMaxSize = en_PACKET::eBUFFER_DEFAULT;
 		m_iFront = m_iRear = m_iUsingSize = m_lRefCount = 0;
-		m_cpBuffer = (char*)malloc(sizeof(char) * m_iMaxSize);
-<<<<<<< HEAD
+		m_cpHeadPtr = (char*)malloc(sizeof(char) * m_iMaxSize);
+		m_cpPayloadBuffer = m_cpHeadPtr + 5;
 		InitializeCriticalSection(&m_CS);
-=======
->>>>>>> b5c921273379b789f4f3bcbf35584704d6b7a6a6
+		m_bIsEncoded = false;
 	}
 
 	CMessage(int iBufferSize)
 	{
 		m_iMaxSize = iBufferSize;
 		m_iFront = m_iRear = m_iUsingSize = 0;
-		m_cpBuffer = (char*)malloc(sizeof(char) * m_iMaxSize);
+		m_cpPayloadBuffer = (char*)malloc(sizeof(char) * m_iMaxSize);
 	}
 
 	virtual	~CMessage()
@@ -72,9 +72,9 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	void	Release(void)
 	{
-		if (m_cpBuffer != nullptr)
+		if (m_cpPayloadBuffer != nullptr)
 		{
-			free(m_cpBuffer);
+			free(m_cpPayloadBuffer);
 		}
 	}
 
@@ -98,9 +98,7 @@ public:
 
 	static CMessage* Alloc()
 	{
-		PRO_BEGIN(_T("POOL ALLOC"));
 		CMessage* newMessage = g_PacketPool.Alloc();
-		PRO_END(_T("POOL ALLOC"));
 		newMessage->Clear();
 		InterlockedIncrement(&newMessage->m_lRefCount);
 		return newMessage;
@@ -146,7 +144,11 @@ public:
 	// Parameters: 없음.
 	// Return: (char *)버퍼 포인터.
 	//////////////////////////////////////////////////////////////////////////
-	char* GetBufferPtr(void) { return m_cpBuffer; }
+	char* GetBufferPtr(void) { return m_cpPayloadBuffer; }
+
+	char* GetLanHeaderPtr(void) { return m_cpHeadPtr + 3; }
+
+	char* GetWanHeaderPtr(void) { return m_cpHeadPtr; }
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -174,10 +176,9 @@ public:
 		return g_PacketPool.GetUseCount();
 	}
 
-	//static int GetPacketAllocSize()
-	//{
-	//	return g_PacketPool.GetAllocCount();
-	//}
+	void SetLanMessageHeader(char* header, int len);
+
+	void SetEncodingCode();
 
 	//////////////////////////////////////////////////////////////////////////
 	// 버퍼 Pos 이동. (음수이동은 안됨)

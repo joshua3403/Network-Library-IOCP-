@@ -48,6 +48,9 @@
     <ClInclude Include="Queue(LockFree).h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Profiler(TLS).h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -76,6 +79,9 @@
     </ClCompile>
     <ClCompile Include="CMemoryPool%28LockFree%29_TLS.h">
       <Filter>헤더 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Profiler(TLS).cpp">
+      <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
