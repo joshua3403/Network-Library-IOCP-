@@ -19,14 +19,21 @@ class CMessage
 	};
 
 private:
-	int m_iMaxSize;
+	char* m_cpBuffer;
+	LONG m_lRefCount;
 	int m_iFront;
 	int m_iRear;
 	int m_iUsingSize;
+<<<<<<< HEAD
 	char* m_cpBuffer;
 	LONG m_lRefCount;
 	friend class CLFFreeList_TLS<CMessage>;
 	CRITICAL_SECTION m_CS;
+=======
+	int m_iMaxSize;
+
+	friend class CLFFreeList_TLS<CMessage>;
+>>>>>>> b5c921273379b789f4f3bcbf35584704d6b7a6a6
 
 public:
 	//////////////////////////////////////////////////////////////////////////
@@ -39,7 +46,10 @@ public:
 		m_iMaxSize = en_PACKET::eBUFFER_DEFAULT;
 		m_iFront = m_iRear = m_iUsingSize = m_lRefCount = 0;
 		m_cpBuffer = (char*)malloc(sizeof(char) * m_iMaxSize);
+<<<<<<< HEAD
 		InitializeCriticalSection(&m_CS);
+=======
+>>>>>>> b5c921273379b789f4f3bcbf35584704d6b7a6a6
 	}
 
 	CMessage(int iBufferSize)
@@ -88,7 +98,9 @@ public:
 
 	static CMessage* Alloc()
 	{
+		PRO_BEGIN(_T("POOL ALLOC"));
 		CMessage* newMessage = g_PacketPool.Alloc();
+		PRO_END(_T("POOL ALLOC"));
 		newMessage->Clear();
 		InterlockedIncrement(&newMessage->m_lRefCount);
 		return newMessage;

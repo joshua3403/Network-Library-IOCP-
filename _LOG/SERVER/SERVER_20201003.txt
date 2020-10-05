@@ -1,0 +1,4 @@
+[SERVER] [2020-10-03 14:29:39 / ERROR / 00000001] bind() Error!
+
+[SERVER] [2020-10-03 14:29:39 / ERROR / 00000002] Initialize failed!
+

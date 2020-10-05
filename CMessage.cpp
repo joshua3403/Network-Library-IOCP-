@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "CMessage.h"
 
-CLFFreeList_TLS<CMessage> CMessage::g_PacketPool;
+CLFFreeList_TLS<CMessage> CMessage::g_PacketPool(false);
 
 void CMessage::PutData(char* data, int size)
 {
