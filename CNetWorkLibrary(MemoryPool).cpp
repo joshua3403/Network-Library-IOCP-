@@ -542,9 +542,8 @@ void joshua::NetworkLibrary::SendPacket(UINT64 id, CMessage* message)
 		return;
 
 	message->AddRef();
-	WORD payloadLen = message->GetDataSize();
-	message->SetLanMessageHeader((char*)payloadLen, sizeof(payloadLen));
 	pSession->SendBuffer.Enqueue(message);
+
 	PostSend(pSession);
 
 	InterlockedIncrement64(&_lSendTPS);
@@ -718,6 +717,8 @@ void joshua::NetworkLibrary::RecvComplete(st_SESSION* pSession, DWORD dwTransfer
 
 		CMessage* pPacket = CMessage::Alloc();
 
+		(*pPacket) << wHeader;
+
 		//// 3. Payload 길이 확인 : PacketBuffer의 최대 크기보다 Payload가 클 경우
 		//if (pPacket->GetBufferSize() < wHeader)
 		//{
@@ -736,6 +737,8 @@ void joshua::NetworkLibrary::RecvComplete(st_SESSION* pSession, DWORD dwTransfer
 			DisconnectSession(pSession);
 			break;
 		}
+
+		pPacket->MoveWritePos(wHeader);
 		//UINT64 data;
 		//memcpy(&data, pPacket->GetBufferPtr() + 2, 8);
 		////wprintf(L"Recv data : %08ld\n", data);
