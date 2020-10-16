@@ -52,7 +52,6 @@ void CMessage::SetEncodingCode()
 
 		char* payLoadPtr = GetBufferPtr();
 		char* headerPtr = GetWanHeaderPtr();
-		char* checkSumPtr = headerPtr + 4;
 		char randKey = m_bRandKey;
 		char key = FIXKEY;
 		short len = GetDataSize();
@@ -64,7 +63,6 @@ void CMessage::SetEncodingCode()
 		}
 		checkSum = checkSum % 256;
 
-		*checkSumPtr = checkSum;
 		char test = 0;
 		char test1 = 0;
 		for (int i = 0; i < len; i++)
@@ -73,9 +71,43 @@ void CMessage::SetEncodingCode()
 			payLoadPtr[i] = test ^ (test1 + key + i + 1);
 			test1 = payLoadPtr[i];
 		}
+		st_PACKET_HEADER* header = (st_PACKET_HEADER*)GetWanHeaderPtr();
+		header->byCode = FIXKEY;
+		header->byCheckSum = checkSum;
+		header->wLen = len;
+		header->byRandKey = randKey;
+}
 
-		*(headerPtr + 2) = len;
-		*(headerPtr + 3) = randKey;
+BOOL CMessage::SetDecodingCode(st_PACKET_HEADER* pHeader)
+{
+	if(!m_bIsEncoded)
+		return FALSE;
+
+	char randKey = pHeader->byRandKey;
+	char fixKey = FIXKEY;
+	int dataSize = GetDataSize();
+	char* pPayload = GetBufferPtr();
+
+	// pHeaderÀÇ ·£´ýÅ°, Ã¼Å©¼¶, Playload º¹È£È­
+	pHeader->byRandKey ^= fixKey;
+	pHeader->byCheckSum ^= fixKey;
+	for (int i = 0; i < dataSize; i++)
+	{
+		pPayload[i] ^= fixKey;
+	}
+
+	// Ã¼Å©¼¶ °è»ê
+	int iCheck = 0;
+	for (int i = 0; i < dataSize; i++)
+	{
+		iCheck += pPayload[i];
+	}
+
+	char cCheck = (char)iCheck % 256;
+	if (pHeader->byCheckSum != cCheck)
+		return FALSE;
+	return TRUE;
+
 }
 
 void CMessage::IncreaseBufferSize(int size)

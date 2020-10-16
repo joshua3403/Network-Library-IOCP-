@@ -5,6 +5,16 @@
 
 #define FIXKEY 0x10
 
+#pragma pack(push, 1) 
+struct st_PACKET_HEADER
+{
+	BYTE byCode;
+	WORD wLen;
+	BYTE byRandKey;
+	BYTE byCheckSum;
+};
+#pragma pack(pop)
+
 class CMessage
 {
 	/*---------------------------------------------------------------
@@ -20,6 +30,8 @@ class CMessage
 		eBUFFER_UPSCALE_INT64 = 8,
 		eBUFFER_HEADER_SIZE = 5
 	};
+
+
 
 private:
 	int m_iMaxSize;
@@ -179,6 +191,8 @@ public:
 	void SetLanMessageHeader(char* header, int len);
 
 	void SetEncodingCode();
+
+	BOOL SetDecodingCode(st_PACKET_HEADER* pHeader);
 
 	//////////////////////////////////////////////////////////////////////////
 	// 버퍼 Pos 이동. (음수이동은 안됨)
